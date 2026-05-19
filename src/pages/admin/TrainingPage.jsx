@@ -8,7 +8,7 @@ const TrainingPage = () => {
         title: 'TaskDesk Complete System Walkthrough',
         description: 'Watch this comprehensive training video to master all the features of TaskDesk. This guide covers task assignment protocols, checklist verification steps, maintenance reporting, delegation workflows, and the admin dashboard settings overview.',
         duration: '12:45',
-        youtubeUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Configurable video link
+        youtubeUrl: 'https://www.youtube.com/embed/v2yqJc1CKBA', // Configurable video link
         author: 'TaskDesk Onboarding Team'
     };
 

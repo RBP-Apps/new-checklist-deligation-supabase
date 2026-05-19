@@ -52,7 +52,7 @@ const WorkingDataPage = () => {
         try {
             const { data } = await supabase
                 .from('new_users')
-                .select('user_name')
+                .select('user_name, reported_by')
                 .order('user_name', { ascending: true });
             if (data) {
                 setUsers(data);
@@ -206,6 +206,16 @@ const WorkingDataPage = () => {
     };
 
     const handleDeleteLog = async (log) => {
+        const me = (localStorage.getItem('user-name') || '').toLowerCase();
+        const role = (localStorage.getItem('role') || '').toLowerCase();
+        const isOwner = (log.name_of_person || '').toLowerCase() === me;
+        const isAdmin = role === 'admin' || role === 'superadmin';
+
+        if (!isAdmin && !isOwner) {
+            alert('You do not have permission to delete this log entry.');
+            return;
+        }
+
         if (!window.confirm('Are you sure you want to delete this log entry?')) return;
 
         try {
@@ -228,8 +238,33 @@ const WorkingDataPage = () => {
         }
     };
 
+    const loggedInUser = localStorage.getItem('user-name') || 'Maheshwar Lal';
+    const userRole = (localStorage.getItem('role') || 'user').toLowerCase();
+
+    // Filter logs based on user access control rules
+    const allowedLogs = workingLogs.filter(log => {
+        const nameOfPerson = (log.name_of_person || '').toLowerCase();
+        const me = loggedInUser.toLowerCase();
+
+        if (userRole === 'user') {
+            // Regular user: can ONLY see their own records
+            return nameOfPerson === me;
+        } else if (userRole === 'hod') {
+            // HOD: can ONLY see themselves and users reported to them
+            const reportingUsersLower = users
+                .filter(u => (u.reported_by || '').toLowerCase() === me)
+                .map(u => (u.user_name || '').toLowerCase());
+            
+            const isReport = reportingUsersLower.includes(nameOfPerson);
+            const isMe = nameOfPerson === me;
+            return isMe || isReport;
+        }
+        // Admin, Superadmin, COO, Directors, etc.: can see all logs
+        return true;
+    });
+
     // Filtered lists logic
-    const filteredLogs = workingLogs.filter(log => {
+    const filteredLogs = allowedLogs.filter(log => {
         const matchesSearch = searchTerm === '' ||
             (log.name_of_person || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (log.unique_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -241,8 +276,8 @@ const WorkingDataPage = () => {
         return matchesSearch && matchesPerson;
     });
 
-    // Populate distinct person names for dropdown filter
-    const uniquePersons = Array.from(new Set(workingLogs.map(l => l.name_of_person))).sort();
+    // Populate distinct person names for dropdown filter (only showing allowed names to prevent confusion)
+    const uniquePersons = Array.from(new Set(allowedLogs.map(l => l.name_of_person))).sort();
 
     return (
         <AdminLayout>

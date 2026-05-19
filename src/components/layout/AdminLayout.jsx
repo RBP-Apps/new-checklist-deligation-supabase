@@ -278,19 +278,19 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
     //   showFor: isSuperAdmin ? ["admin"] : [],
     // },
     {
+      href: "/dashboard/working-data",
+      label: "Working Data",
+      icon: Database,
+      active: location.pathname.includes("/dashboard/working-data"),
+      showFor: ["admin", "HOD", "user"],
+    },
+    {
       href: "/dashboard/setting",
       label: "Settings",
       icon: Settings,
       active: location.pathname.includes("/dashboard/setting"),
       // Only show for super admin (username = 'admin')
       showFor: isSuperAdmin ? ["admin"] : [],
-    },
-    {
-      href: "/dashboard/working-data",
-      label: "Working Data",
-      icon: Database,
-      active: location.pathname.includes("/dashboard/working-data"),
-      showFor: ["admin", "HOD", "user"],
     },
     {
       href: "/dashboard/training",

@@ -284,7 +284,7 @@ export const sendUrgentTaskNotification = async (taskDetails) => {
         // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} startDate, {{5}} givenBy, {{6}} link
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
-            'urgent_task_assigned',
+            'urgent_task_assigned_approved',
             [doerName, taskId, displayDescription, dueDate, givenBy, APP_LINK]
         );
 
@@ -451,7 +451,7 @@ export const sendDelegationTaskNotification = async (taskDetails) => {
             phoneNumber,
             'new_task_notification',
             [doerName, taskId, department || 'N/A', displayDescription, startDate, givenBy, APP_LINK],
-            'en_US' // User specified en_US for this template
+            'en' // Changed from en_US to en because WhatsApp API rejected en_US
         );
 
         if (sent && audioUrl) {

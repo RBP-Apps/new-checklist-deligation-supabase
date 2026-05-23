@@ -34,6 +34,7 @@ import { sendTaskExtensionNotification, sendUrgentTaskNotification } from "../..
 import AudioPlayer from "../../components/AudioPlayer";
 import { useMagicToast } from "../../context/MagicToastContext";
 import RenderDescription from "../../components/RenderDescription";
+import DelegationDataPage from "../delegation";
 
 const isAudioUrl = (url) => {
   if (!url || typeof url !== 'string') return false;
@@ -1093,8 +1094,9 @@ const AllTasks = () => {
                 }} />
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 flex-grow justify-end">
-                <div className="relative flex-grow max-w-sm">
+              {activeTab !== "delegation" && (
+                <div className="flex flex-wrap items-center gap-2 flex-grow justify-end">
+                  <div className="relative flex-grow max-w-sm">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                   <input
                     type="text"
@@ -1211,11 +1213,16 @@ const AllTasks = () => {
                   )}
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Success Message */}
+        {activeTab === "delegation" ? (
+          <DelegationDataPage isEmbedded={true} />
+        ) : (
+          <>
+            {/* Success Message */}
         {successMessage && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 sm:px-4 py-3 rounded-md flex items-center justify-between text-sm sm:text-base animate-in fade-in duration-300">
             <div className="flex items-center">
@@ -2072,6 +2079,8 @@ const AllTasks = () => {
             </div>
           </div>
         )}
+      </>
+      )}
       </div>
 
       {/* Image Lightbox */}

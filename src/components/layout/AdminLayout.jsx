@@ -219,13 +219,6 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
       showFor: ["admin", "HOD"],
     },
     {
-      href: "/dashboard/delegation",
-      label: "Delegation",
-      icon: BookmarkCheck,
-      active: location.pathname === "/dashboard/delegation",
-      showFor: ["admin", "HOD", "user"],
-    },
-    {
       href: "/dashboard/task",
       label: "Task",
       icon: CalendarCheck,

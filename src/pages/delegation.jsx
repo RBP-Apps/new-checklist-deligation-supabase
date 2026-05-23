@@ -62,7 +62,7 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-function DelegationDataPage() {
+function DelegationDataPage({ isEmbedded = false }) {
   const { showToast } = useMagicToast();
   const [uploadedImages, setUploadedImages] = useState({});
   const [accountData, setAccountData] = useState([]);
@@ -1276,8 +1276,10 @@ function DelegationDataPage() {
 
   const selectedItemsCount = selectedItems.size;
 
+  const LayoutWrapper = isEmbedded ? Fragment : AdminLayout;
+
   return (
-    <AdminLayout>
+    <LayoutWrapper>
       <>
       <div className="space-y-4 sm:space-y-6">
         {/* Sticky Header and Controls */}
@@ -2212,7 +2214,7 @@ function DelegationDataPage() {
         media={viewerMedia} 
       />
       </>
-     </AdminLayout>
+     </LayoutWrapper>
   );
 }
 

@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'migrate.js', 'scratch_db_check.js', 'scratch_log_reader.js', 'vite.config.js', 'postcss.config.js', 'tailwind.config.js'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {

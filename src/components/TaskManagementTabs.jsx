@@ -3,19 +3,21 @@ import React from 'react'
 import { ClipboardCheck, Hammer, Wrench, Activity, Users } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-export default function TaskManagementTabs({ activeTab, setActiveTab }) {
+export default function TaskManagementTabs({ activeTab, setActiveTab, hideDelegation = false }) {
     const role = (localStorage.getItem("role") || "").toLowerCase();
     const designation = (localStorage.getItem("designation") || "").toLowerCase();
     const isMachineOperator = designation.includes("machin") || designation.includes("operat") || designation.includes("oprat");
 
     const allTabs = [
         { id: 'checklist', label: 'Checklist', icon: ClipboardCheck, color: 'text-purple-600', activeColor: 'bg-purple-600' },
+        { id: 'delegation', label: 'Delegation', icon: ClipboardCheck, color: 'text-rose-600', activeColor: 'bg-rose-600' },
         { id: 'maintenance', label: 'Maintenance', icon: Hammer, color: 'text-blue-600', activeColor: 'bg-blue-600' },
         { id: 'repair', label: 'Repair', icon: Wrench, color: 'text-orange-600', activeColor: 'bg-orange-600' },
         { id: 'ea', label: 'EA', icon: Users, color: 'text-green-600', activeColor: 'bg-green-600' },
     ]
 
     const tabs = allTabs.filter(tab => {
+        if (hideDelegation && tab.id === 'delegation') return false;
         if (role === "hod") {
             if (tab.id === "checklist") return true;
             if (tab.id === "repair" && isMachineOperator) return true;
@@ -48,7 +50,7 @@ export default function TaskManagementTabs({ activeTab, setActiveTab }) {
                                     {isActive && (
                                         <motion.div
                                             layoutId="activeTabPillGlobal"
-                                            className={`absolute inset-0 rounded-lg shadow-md z-[-1] ${tab.id === 'checklist' ? 'bg-purple-600' : tab.id === 'maintenance' ? 'bg-blue-600' : tab.id === 'repair' ? 'bg-orange-600' : 'bg-green-600'}`}
+                                            className={`absolute inset-0 rounded-lg shadow-md z-[-1] ${tab.id === 'checklist' ? 'bg-purple-600' : tab.id === 'delegation' ? 'bg-rose-600' : tab.id === 'maintenance' ? 'bg-blue-600' : tab.id === 'repair' ? 'bg-orange-600' : 'bg-green-600'}`}
                                             transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                         />
                                     )}

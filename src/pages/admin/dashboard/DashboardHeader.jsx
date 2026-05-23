@@ -153,19 +153,7 @@ export default function DashboardHeader({
                                 </div>
                             )}
 
-                            <div className="relative">
-                                <select
-                                    value={dashboardType}
-                                    onChange={(e) => setDashboardType(e.target.value)}
-                                    className="w-full appearance-none rounded-lg border border-purple-200 p-3 pr-8 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 text-sm font-medium bg-white shadow-sm"
-                                >
-                                    <option value="checklist">Checklist View</option>
-                                    <option value="delegation">Delegation View</option>
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-purple-400">
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </div>
-                            </div>
+
 
                             {/* Department Filter - Show for checklist and delegation */}
                             {(dashboardType === "checklist" || dashboardType === "delegation") && isAdmin && (
@@ -282,14 +270,7 @@ export default function DashboardHeader({
                             </div>
                         )}
 
-                        <select
-                            value={dashboardType}
-                            onChange={(e) => setDashboardType(e.target.value)}
-                            className="w-[110px] sm:w-[140px] rounded-md border border-purple-200 p-2 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                        >
-                            <option value="checklist">Checklist</option>
-                            <option value="delegation">Delegation</option>
-                        </select>
+
 
                         {/* Department Filter - Show for checklist and delegation */}
                         {(dashboardType === "checklist" || dashboardType === "delegation") && isAdmin && (

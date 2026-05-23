@@ -104,9 +104,11 @@ export const fetchDashboardDataApi = async (
         // while excluding stale old records that inflate the count.
         {
           const now2 = new Date();
-          // Lower bound: 1st day of the PREVIOUS month (covers last ~2 months)
-          const prevMonthStart = new Date(now2.getFullYear(), now2.getMonth() - 1, 1)
-            .toISOString().split('T')[0];
+          // Match AllTasks.jsx: Fetch up to 18 months back
+          const pastDate = new Date(now2);
+          pastDate.setMonth(now2.getMonth() - 18);
+          const prevMonthStart = pastDate.toISOString().split('T')[0];
+          
           const upperBound = endDate || today;
           const lowerBound = startDate || prevMonthStart;
           query = query

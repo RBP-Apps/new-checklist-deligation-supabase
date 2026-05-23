@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import AdminLayout from "../../components/layout/AdminLayout";
 import supabase from "../../SupabaseClient";
 import {
@@ -44,6 +45,7 @@ const isAudioUrl = (url) => {
 };
 
 const AllTasks = () => {
+  const location = useLocation();
   const dispatch = useDispatch();
   const { customDropdowns = [] } = useSelector((state) => state.setting || {});
   const { showToast } = useMagicToast();
@@ -66,7 +68,8 @@ const AllTasks = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateFilter, setDateFilter] = useState("all"); // all, today, overdue, upcoming
-  const [dropdownOpen, setDropdownOpen] = useState({ dateFilter: false });
+  const [taskScope, setTaskScope] = useState("overview"); // overview, my_tasks, assigned_by_me
+  const [dropdownOpen, setDropdownOpen] = useState({ dateFilter: false, scopeFilter: false });
   const [lightboxImage, setLightboxImage] = useState(null); // { url, name }
   const [fetchingProgress, setFetchingProgress] = useState(0);
 
@@ -135,6 +138,19 @@ const AllTasks = () => {
     setUserRole(role || "");
     setUsername(user || "");
   }, []);
+
+  // Handle incoming navigation state from dashboard cards
+  useEffect(() => {
+    if (location.state) {
+      const { filter, tab, showHistory: shouldShowHistory } = location.state;
+      if (tab) setActiveTab(tab);
+      if (filter) setDateFilter(filter);
+      if (shouldShowHistory !== undefined) setShowHistory(shouldShowHistory);
+      
+      // Clear the state so it doesn't re-trigger if the user refreshes or navigates normally
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state]);
 
   // Format date to dd/mm/yyyy
   const formatDate = useCallback((dateString) => {
@@ -286,8 +302,8 @@ const AllTasks = () => {
               { id: "machine_name", label: "Machine" },
               { id: "part_name", label: "Part" },
               { id: "part_area", label: "Area" },
-              { id: "planned_date", label: "Planned" },
-              { id: "freq", label: "Freq" },
+              { id: "planned_date", label: "Due Date" },
+              { id: "freq", label: "Frequency" },
               { id: "require_attachment", label: "Attach" },
               { id: "submission_date", label: "Actual" },
               { id: "status", label: "Status" },
@@ -303,8 +319,8 @@ const AllTasks = () => {
               { id: "part_area", label: "Area" },
               { id: "given_by", label: "Given By" },
               { id: "name", label: "Name" },
-              { id: "planned_date", label: "Planned" },
-              { id: "freq", label: "Freq" },
+              { id: "planned_date", label: "Due Date" },
+              { id: "freq", label: "Frequency" },
               { id: "enable_reminders", label: "Remind" },
               { id: "require_attachment", label: "Attach" },
               { id: "status", label: "Status" },
@@ -362,7 +378,7 @@ const AllTasks = () => {
             { id: "department", label: "Dept" },
             { id: "doer_name", label: "Name" },
             { id: "phone_number", label: "Phone" },
-            { id: "planned_date", label: "Planned" },
+            { id: "planned_date", label: "Due Date" },
             { id: "status", label: "Status" },
             { id: "attachment", label: "Attach" },
           ];
@@ -381,8 +397,8 @@ const AllTasks = () => {
             { id: "department", label: "Dept" },
             { id: "given_by", label: "Given By" },
             { id: "name", label: "Name" },
-            { id: "planned_date", label: "Planned" },
-            { id: "frequency", label: "Freq" },
+            { id: "planned_date", label: "Due Date" },
+            { id: "frequency", label: "Frequency" },
             { id: "enable_reminder", label: "Remind" },
             { id: "require_attachment", label: "Attach" },
             { id: "status", label: "Status" },
@@ -400,8 +416,8 @@ const AllTasks = () => {
             { id: "department", label: "Dept" },
             { id: "given_by", label: "Given By" },
             { id: "name", label: "Name" },
-            { id: "planned_date", label: "Planned" },
-            { id: "frequency", label: "Freq" },
+            { id: "planned_date", label: "Due Date" },
+            { id: "frequency", label: "Frequency" },
             { id: "enable_reminder", label: "Remind" },
             { id: "require_attachment", label: "Attach" },
             { id: "status", label: "Status" },
@@ -417,7 +433,12 @@ const AllTasks = () => {
       const currentUserRole = (userRole || "").toLowerCase();
       const isSuperAdmin = currentUsername.toLowerCase() === "admin";
       
-      if (!isSuperAdmin) {
+      if (taskScope === "my_tasks") {
+        query = query.eq(nameField, currentUsername);
+      } else if (taskScope === "assigned_by_me") {
+        const givenByField = activeTab === "repair" ? "filled_by" : "given_by";
+        query = query.eq(givenByField, currentUsername);
+      } else if (!isSuperAdmin) {
         let reportingUsers = [currentUsername];
         if (currentUserRole === "admin" || currentUserRole === "hod") {
           const { data: reports } = await supabase
@@ -428,9 +449,6 @@ const AllTasks = () => {
             reportingUsers = [currentUsername, ...reports.map((r) => (r.user_name || ""))];
           }
         }
-
-        // Checklist, Maintenance, Repair, EA all have a field for the assigned person
-        // Repair uses assigned_person, EA uses doer_name, others use name
         query = query.in(nameField, reportingUsers);
       }
 
@@ -513,7 +531,7 @@ const AllTasks = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [username, userRole, activeTab, showHistory, holidaysList, workingDaysList, searchTerm, dateFilter]);
+  }, [username, userRole, activeTab, showHistory, holidaysList, workingDaysList, searchTerm, dateFilter, taskScope]);
 
   useEffect(() => {
     fetchData();
@@ -1087,7 +1105,7 @@ const AllTasks = () => {
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 justify-end">
                   <button
                     onClick={() => {
                       setShowHistory(!showHistory);
@@ -1100,7 +1118,7 @@ const AllTasks = () => {
                     {showHistory ? (
                       <><ArrowLeft className="h-4 w-4" /><span>Live</span></>
                     ) : (
-                      <><History className="h-4 w-4" /><span>History</span></>
+                      <><History className="h-4 w-4" /><span>Completed</span></>
                     )}
                   </button>
 
@@ -1108,7 +1126,39 @@ const AllTasks = () => {
                     <>
                       <div className="relative">
                         <button
-                          onClick={() => setDropdownOpen(prev => ({ ...prev, dateFilter: !prev.dateFilter }))}
+                          onClick={() => setDropdownOpen(prev => ({ ...prev, scopeFilter: !prev.scopeFilter, dateFilter: false }))}
+                          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all shadow-sm ${taskScope !== 'overview' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200'}`}
+                        >
+                          <Users className="h-3 w-3" />
+                          <span className="capitalize">{taskScope.replace(/_/g, ' ')}</span>
+                          <ChevronDown size={14} className={`transition-transform ${dropdownOpen?.scopeFilter ? 'rotate-180' : ''}`} />
+                        </button>
+                        {dropdownOpen?.scopeFilter && (
+                          <div className="absolute z-50 mt-2 w-48 right-0 rounded-xl bg-white shadow-xl border border-gray-100 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            {[
+                              { id: 'overview', label: 'Department Overview' },
+                              { id: 'my_tasks', label: 'My Tasks' },
+                              { id: 'assigned_by_me', label: 'Assigned By Me' }
+                            ].map((filter) => (
+                              <button
+                                key={filter.id}
+                                onClick={() => {
+                                  setTaskScope(filter.id);
+                                  setSelectedItems(new Set());
+                                  setDropdownOpen(prev => ({ ...prev, scopeFilter: false }));
+                                }}
+                                className={`block w-full text-left px-4 py-2 text-xs font-bold transition-colors ${taskScope === filter.id ? 'bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500' : 'text-gray-600 hover:bg-gray-50'}`}
+                              >
+                                {filter.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="relative">
+                        <button
+                          onClick={() => setDropdownOpen(prev => ({ ...prev, dateFilter: !prev.dateFilter, scopeFilter: false }))}
                           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all shadow-sm ${dateFilter !== 'all' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200'}`}
                         >
                           <Filter className="h-3 w-3" />

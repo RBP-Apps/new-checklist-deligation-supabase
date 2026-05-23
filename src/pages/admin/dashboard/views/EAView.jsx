@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import { Users, Phone, Calendar, FileText, CheckCircle, Clock, AlertCircle, ArrowUpRight, TrendingUp, UserCheck, PieChart, Play, Pause, Save, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import AudioPlayer from "../../../../components/AudioPlayer";
 import supabase from "../../../../SupabaseClient";
 
@@ -14,6 +15,99 @@ const isAudioUrl = (url) => {
 
 
 
+const EaStatsRow = ({ title, subtitle, stats, theme, scope = "overview" }) => {
+    const navigate = useNavigate();
+
+    const handleCardClick = (filterType, showHistoryValue = false) => {
+        navigate('/dashboard/task', {
+            state: {
+                filter: filterType,
+                tab: 'ea',
+                showHistory: showHistoryValue,
+                scope: scope
+            }
+        });
+    };
+
+    const themes = {
+        indigo: { bg: 'bg-indigo-50/50', border: 'border-indigo-100', text: 'text-indigo-700', gradient: 'from-indigo-500 to-blue-600' },
+        emerald: { bg: 'bg-emerald-50/50', border: 'border-emerald-100', text: 'text-emerald-700', gradient: 'from-emerald-500 to-teal-500' },
+        amber: { bg: 'bg-amber-50/50', border: 'border-amber-100', text: 'text-amber-700', gradient: 'from-amber-500 to-orange-500' },
+    };
+    const t = themes[theme] || themes.indigo;
+
+    return (
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+            <div className="flex items-center justify-between mb-5">
+                <div>
+                    <h2 className="text-lg font-black text-gray-800 tracking-tight">{title}</h2>
+                    {subtitle && <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{subtitle}</p>}
+                </div>
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${t.bg} ${t.text} ${t.border} border`}>
+                    EA Analytics
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <div 
+                    onClick={() => handleCardClick('all', false)}
+                    className={`cursor-pointer hover:-translate-y-1 transition-transform relative overflow-hidden rounded-xl p-4 bg-gradient-to-br ${t.gradient} text-white shadow-sm flex flex-col justify-between`}
+                >
+                    <div className="relative z-10">
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Total Tasks</span>
+                        <div className="text-3xl font-black mt-1">{stats.total}</div>
+                    </div>
+                    <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-white opacity-10 rounded-full blur-xl"></div>
+                </div>
+
+                <div 
+                    onClick={() => handleCardClick('all', true)}
+                    className="cursor-pointer rounded-xl p-4 bg-gray-50/80 border border-gray-100 flex flex-col justify-between group hover:bg-emerald-50/80 hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300"
+                >
+                    <div className="flex items-center gap-2">
+                        <CheckCircle size={14} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-emerald-700 transition-colors">Completed</span>
+                    </div>
+                    <div className="text-2xl font-black text-gray-800 mt-3 group-hover:text-emerald-700 transition-colors">{stats.completed}</div>
+                </div>
+
+                <div 
+                    onClick={() => handleCardClick('today', false)}
+                    className="cursor-pointer rounded-xl p-4 bg-gray-50/80 border border-gray-100 flex flex-col justify-between group hover:bg-indigo-50/80 hover:border-indigo-100 hover:-translate-y-1 transition-all duration-300"
+                >
+                    <div className="flex items-center gap-2">
+                        <Clock size={14} className="text-indigo-500 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-indigo-700 transition-colors">Pending</span>
+                    </div>
+                    <div className="text-2xl font-black text-gray-800 mt-3 group-hover:text-indigo-700 transition-colors">{stats.pending}</div>
+                </div>
+
+                <div 
+                    onClick={() => handleCardClick('all', false)}
+                    className="cursor-pointer rounded-xl p-4 bg-gray-50/80 border border-gray-100 flex flex-col justify-between group hover:bg-amber-50/80 hover:border-amber-100 hover:-translate-y-1 transition-all duration-300"
+                >
+                    <div className="flex items-center gap-2">
+                        <TrendingUp size={14} className="text-amber-500 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-amber-700 transition-colors">Extended</span>
+                    </div>
+                    <div className="text-2xl font-black text-gray-800 mt-3 group-hover:text-amber-700 transition-colors">{stats.extended}</div>
+                </div>
+
+                <div 
+                    onClick={() => handleCardClick('overdue', false)}
+                    className="cursor-pointer rounded-xl p-4 bg-gray-50/80 border border-gray-100 flex flex-col justify-between group hover:bg-rose-50/80 hover:border-rose-100 hover:-translate-y-1 transition-all duration-300"
+                >
+                    <div className="flex items-center gap-2">
+                        <AlertCircle size={14} className="text-rose-500 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-rose-700 transition-colors">Overdue</span>
+                    </div>
+                    <div className="text-2xl font-black text-gray-800 mt-3 group-hover:text-rose-700 transition-colors">{stats.overdue}</div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function EAView() {
     const [eaTasks, setEATasks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -25,6 +119,8 @@ export default function EAView() {
         extended: 0,
         doersCount: 0
     });
+    const [myTaskStats, setMyTaskStats] = useState({ total: 0, pending: 0, completed: 0, overdue: 0, extended: 0 });
+    const [assignedByMeStats, setAssignedByMeStats] = useState({ total: 0, pending: 0, completed: 0, overdue: 0, extended: 0 });
     const [doerStats, setDoerStats] = useState([]);
 
     // Editing State
@@ -176,40 +272,61 @@ export default function EAView() {
         today.setHours(0, 0, 0, 0);
         const todayStr = today.toISOString().split('T')[0];
 
-        // Filter out upcoming the tasks for stats calculation (except completed)
-        const activeOrDoneTasks = tasks.filter(t => {
+        const calcForTasks = (taskList) => {
+            const activeOrDoneTasks = taskList.filter(t => {
+                const isCompleted = (t.status?.toLowerCase() === 'done' && t.admin_done) || t.status?.toLowerCase() === 'approved';
+                if (isCompleted) return true;
+
+                const referenceDate = t.task_start_date || t.planned_date;
+                if (!referenceDate) return true;
+
+                const taskDate = new Date(referenceDate);
+                taskDate.setHours(0, 0, 0, 0);
+                return taskDate <= today || t.status?.toLowerCase() === 'extended' || t.status?.toLowerCase() === 'extend';
+            });
+
+            const total = activeOrDoneTasks.length;
+
+            const pending = activeOrDoneTasks.filter(t =>
+                (t.status?.toLowerCase() === 'pending' || (t.status?.toLowerCase() === 'done' && !t.admin_done))
+            ).length;
+
+            const completed = activeOrDoneTasks.filter(t =>
+                (t.status?.toLowerCase() === 'done' && t.admin_done) || t.status?.toLowerCase() === 'approved'
+            ).length;
+
+            const extended = activeOrDoneTasks.filter(t => t.status?.toLowerCase() === 'extended').length;
+
+            const overdue = activeOrDoneTasks.filter(t => {
+                if (!t.planned_date) return false;
+                const plannedStr = new Date(t.planned_date).toISOString().split('T')[0];
+                return (t.status?.toLowerCase() === 'pending' || t.status?.toLowerCase() === 'extended') && plannedStr < todayStr;
+            }).length;
+
+            return { total, pending, completed, extended, overdue };
+        };
+
+        const overallStats = calcForTasks(tasks);
+
+        const username = (localStorage.getItem('user-name') || '').toLowerCase();
+        
+        const myTasks = tasks.filter(t => (t.doer_name || '').toLowerCase() === username);
+        const myStats = calcForTasks(myTasks);
+
+        const assignedByMeTasks = tasks.filter(t => (t.given_by || '').toLowerCase() === username);
+        const assignedByMeStats = calcForTasks(assignedByMeTasks);
+
+        // Calculate doer statistics based on the same filtered set for overall tasks
+        const doerMap = {};
+        tasks.filter(t => {
             const isCompleted = (t.status?.toLowerCase() === 'done' && t.admin_done) || t.status?.toLowerCase() === 'approved';
             if (isCompleted) return true;
-
             const referenceDate = t.task_start_date || t.planned_date;
             if (!referenceDate) return true;
-
             const taskDate = new Date(referenceDate);
             taskDate.setHours(0, 0, 0, 0);
             return taskDate <= today || t.status?.toLowerCase() === 'extended' || t.status?.toLowerCase() === 'extend';
-        });
-
-        const total = activeOrDoneTasks.length;
-
-        const pending = activeOrDoneTasks.filter(t =>
-            (t.status?.toLowerCase() === 'pending' || (t.status?.toLowerCase() === 'done' && !t.admin_done))
-        ).length;
-
-        const completed = activeOrDoneTasks.filter(t =>
-            (t.status?.toLowerCase() === 'done' && t.admin_done) || t.status?.toLowerCase() === 'approved'
-        ).length;
-
-        const extended = activeOrDoneTasks.filter(t => t.status?.toLowerCase() === 'extended').length;
-
-        const overdue = activeOrDoneTasks.filter(t => {
-            if (!t.planned_date) return false;
-            const plannedStr = new Date(t.planned_date).toISOString().split('T')[0];
-            return (t.status?.toLowerCase() === 'pending' || t.status?.toLowerCase() === 'extended') && plannedStr < todayStr;
-        }).length;
-
-        // Calculate doer statistics based on the same filtered set
-        const doerMap = {};
-        activeOrDoneTasks.forEach(t => {
+        }).forEach(t => {
             const name = t.doer_name || 'Unknown';
             if (!doerMap[name]) {
                 doerMap[name] = { total: 0, completed: 0, pending: 0 };
@@ -223,11 +340,13 @@ export default function EAView() {
         });
 
         const doerList = Object.entries(doerMap)
-            .map(([name, stats]) => ({ name, ...stats }))
+            .map(([name, statsObj]) => ({ name, ...statsObj }))
             .sort((a, b) => b.total - a.total)
             .slice(0, 5);
 
-        setStats({ total, pending, completed, overdue, extended, doersCount: Object.keys(doerMap).length });
+        setStats({ ...overallStats, doersCount: Object.keys(doerMap).length });
+        setMyTaskStats(myStats);
+        setAssignedByMeStats(assignedByMeStats);
         setDoerStats(doerList);
     };
 
@@ -286,150 +405,30 @@ export default function EAView() {
     }
 
     return (
-        <div className="space-y-8 pb-10 animate-in fade-in duration-500">
-            {/* Visual Analytics Header */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-6 pb-10 animate-in fade-in duration-500">
+            <EaStatsRow 
+                title="Department Overview" 
+                subtitle="All tasks across the executive department"
+                stats={stats} 
+                theme="indigo" 
+                scope="overview"
+            />
 
-                {/* Task Distribution (CSS Donut Chart) */}
-                <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-6 self-start flex items-center gap-2">
-                        <PieChart size={16} className="text-blue-600" />
-                        Task Distribution
-                    </h3>
+            <EaStatsRow 
+                title="My Tasks" 
+                subtitle="Tasks assigned directly to you"
+                stats={myTaskStats} 
+                theme="emerald" 
+                scope="my_tasks"
+            />
 
-                    <div className="relative w-40 h-40 mb-6 group cursor-default">
-                        {/* Dynamic SVG Donut */}
-                        <svg viewBox="0 0 36 36" className="w-full h-full transform transition-transform group-hover:scale-105 duration-300">
-                            <circle cx="18" cy="18" r="16" fill="transparent" stroke="#f3f4f6" strokeWidth="4"></circle>
-                            {/* Completed Segment */}
-                            <circle
-                                cx="18" cy="18" r="16" fill="transparent"
-                                stroke="#10b981" strokeWidth="4"
-                                strokeDasharray={`${calculatePercentage(stats.completed, stats.total)} 100`}
-                                strokeDashoffset="0"
-                                className="transition-all duration-1000"
-                            ></circle>
-                            {/* Pending Segment */}
-                            <circle
-                                cx="18" cy="18" r="16" fill="transparent"
-                                stroke="#6366f1" strokeWidth="4"
-                                strokeDasharray={`${calculatePercentage(stats.pending, stats.total)} 100`}
-                                strokeDashoffset={`-${calculatePercentage(stats.completed, stats.total)}`}
-                                className="transition-all duration-1000"
-                            ></circle>
-                            {/* Extended Segment */}
-                            <circle
-                                cx="18" cy="18" r="16" fill="transparent"
-                                stroke="#f59e0b" strokeWidth="4"
-                                strokeDasharray={`${calculatePercentage(stats.extended, stats.total)} 100`}
-                                strokeDashoffset={`-${calculatePercentage(stats.completed + stats.pending, stats.total)}`}
-                                className="transition-all duration-1000"
-                            ></circle>
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-3xl font-black text-gray-800">{stats.total}</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Tasks</span>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-3 w-full mt-auto">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0"></div>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">Done</span>
-                            <span className="ml-auto text-[10px] font-black text-gray-700">{calculatePercentage(stats.completed, stats.total)}%</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 flex-shrink-0"></div>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">Pending</span>
-                            <span className="ml-auto text-[10px] font-black text-gray-700">{calculatePercentage(stats.pending, stats.total)}%</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0"></div>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">Extd</span>
-                            <span className="ml-auto text-[10px] font-black text-gray-700">{calculatePercentage(stats.extended, stats.total)}%</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-red-500">
-                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0"></div>
-                            <span className="text-[10px] font-bold uppercase">Overdue</span>
-                            <span className="ml-auto text-[10px] font-black">{stats.overdue}</span>
-                        </div>
-                    </div>
-                </div>
-
-
-                {/* Your Task Progress */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-6 flex items-center gap-2">
-                        <TrendingUp size={16} className="text-indigo-600" />
-                        Your Task Progress
-                    </h3>
-
-                    <div className="space-y-4 flex-1">
-                        {/* Progress Overview */}
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                            <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs font-bold text-gray-600 uppercase">Overall Completion</span>
-                                <span className="text-lg font-black text-indigo-600">
-                                    {stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%
-                                </span>
-                            </div>
-                            <div className="h-3 w-full bg-white rounded-full overflow-hidden border border-indigo-200">
-                                <div
-                                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000"
-                                    style={{ width: `${stats.total > 0 ? (stats.completed / stats.total) * 100 : 0}%` }}
-                                ></div>
-                            </div>
-                        </div>
-
-                        {/* Task Breakdown */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <CheckCircle size={14} className="text-emerald-600" />
-                                    <span className="text-[10px] font-bold text-emerald-700 uppercase">Completed</span>
-                                </div>
-                                <p className="text-2xl font-black text-emerald-600">{stats.completed}</p>
-                            </div>
-                            <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Clock size={14} className="text-amber-600" />
-                                    <span className="text-[10px] font-bold text-amber-700 uppercase">Pending</span>
-                                </div>
-                                <p className="text-2xl font-black text-amber-600">{stats.pending}</p>
-                            </div>
-                            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <AlertCircle size={14} className="text-blue-600" />
-                                    <span className="text-[10px] font-bold text-blue-700 uppercase">Extended</span>
-                                </div>
-                                <p className="text-2xl font-black text-blue-600">{stats.extended}</p>
-                            </div>
-                            <div className="bg-rose-50 rounded-lg p-3 border border-rose-100">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <AlertCircle size={14} className="text-rose-600" />
-                                    <span className="text-[10px] font-bold text-rose-700 uppercase">Overdue</span>
-                                </div>
-                                <p className="text-2xl font-black text-rose-600">{stats.overdue}</p>
-                            </div>
-                        </div>
-
-                        {/* Motivational Message */}
-                        {stats.total > 0 && (
-                            <div className="text-center pt-2">
-                                {stats.completed === stats.total ? (
-                                    <p className="text-sm font-bold text-emerald-600">🎉 Amazing! All tasks completed!</p>
-                                ) : stats.overdue > 0 ? (
-                                    <p className="text-sm font-bold text-rose-600">⚠️ You have {stats.overdue} overdue task{stats.overdue > 1 ? 's' : ''}</p>
-                                ) : (
-                                    <p className="text-sm font-bold text-indigo-600">💪 Keep going! {stats.pending} task{stats.pending > 1 ? 's' : ''} remaining</p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Premium Stat Cards Removed as requested */}
+            <EaStatsRow 
+                title="Tasks Assigned By Me" 
+                subtitle="Tasks you have delegated to others"
+                stats={assignedByMeStats} 
+                theme="amber" 
+                scope="assigned_by_me"
+            />
 
             {/* Task Console */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

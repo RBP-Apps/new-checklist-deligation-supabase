@@ -17,6 +17,8 @@ export default function DefaultView({
     isLoadingMore,
     hasMoreData,
     displayStats,
+    myTaskStats,
+    assignedByMeStats,
     notDoneTask,
     dateRange,
     activeTab,
@@ -26,16 +28,60 @@ export default function DefaultView({
     userRole,
 }) {
     return (
-        <div className="space-y-4">
-            <StatisticsCards
-                totalTask={displayStats.totalTasks}
-                completeTask={displayStats.completedTasks}
-                pendingTask={displayStats.pendingTasks}
-                overdueTask={displayStats.overdueTasks}
-                notDoneTask={notDoneTask}
-                dashboardType={dashboardType}
-                dateRange={dateRange.filtered ? dateRange : null}
-            />
+        <div className="space-y-8">
+            {/* Total Tasks Section */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                    <h2 className="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">Department Overview</h2>
+                </div>
+                <StatisticsCards
+                    totalTask={displayStats.totalTasks}
+                    completeTask={displayStats.completedTasks}
+                    pendingTask={displayStats.pendingTasks}
+                    overdueTask={displayStats.overdueTasks}
+                    notDoneTask={notDoneTask}
+                    dashboardType={dashboardType}
+                    dateRange={dateRange.filtered ? dateRange : null}
+                    sectionTitle="Total Tasks"
+                    scope="overview"
+                />
+            </div>
+
+            {/* My Tasks Section */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                    <h2 className="text-lg font-bold text-gray-800 border-l-4 border-emerald-500 pl-3">My Tasks</h2>
+                </div>
+                <StatisticsCards
+                    totalTask={myTaskStats.totalTasks}
+                    completeTask={myTaskStats.completedTasks}
+                    pendingTask={myTaskStats.pendingTasks}
+                    overdueTask={myTaskStats.overdueTasks}
+                    notDoneTask={0}
+                    dashboardType={dashboardType}
+                    dateRange={dateRange.filtered ? dateRange : null}
+                    sectionTitle="My Tasks"
+                    scope="my_tasks"
+                />
+            </div>
+
+            {/* Tasks Assigned By Me Section */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                    <h2 className="text-lg font-bold text-gray-800 border-l-4 border-amber-500 pl-3">Tasks Assigned By Me</h2>
+                </div>
+                <StatisticsCards
+                    totalTask={assignedByMeStats.totalTasks}
+                    completeTask={assignedByMeStats.completedTasks}
+                    pendingTask={assignedByMeStats.pendingTasks}
+                    overdueTask={assignedByMeStats.overdueTasks}
+                    notDoneTask={0}
+                    dashboardType={dashboardType}
+                    dateRange={dateRange.filtered ? dateRange : null}
+                    sectionTitle="Tasks Assigned By Me"
+                    scope="assigned_by_me"
+                />
+            </div>
 
             <TaskNavigationTabs
                 taskView={taskView}

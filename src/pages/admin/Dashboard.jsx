@@ -1131,6 +1131,41 @@ export default function AdminDashboard() {
     overdueTasks: departmentData.overdueTasks || 0,
   };
 
+  const currentUserName = (username || "").toLowerCase();
+
+  const myTaskStats = (() => {
+    // Filter tasks assigned to current user
+    const filteredTasks = departmentData.allTasks.filter((task) => {
+      const taskDate = parseTaskStartDate(task.originalTaskStartDate)
+      const assignedUser = (task.assignedTo || "").toLowerCase()
+      // Only count tasks up to today for consistency with other stats
+      return taskDate && taskDate <= today && assignedUser === currentUserName
+    })
+
+    const totalTasks = filteredTasks.length
+    const completedTasks = filteredTasks.filter((task) => task.status === "completed").length
+    const overdueTasks = filteredTasks.filter((task) => task.status === "overdue").length
+    const pendingTasks = totalTasks - completedTasks - overdueTasks
+
+    return { totalTasks, completedTasks, pendingTasks, overdueTasks }
+  })()
+
+  const assignedByMeStats = (() => {
+    // Filter tasks assigned by current user
+    const filteredTasks = departmentData.allTasks.filter((task) => {
+      const taskDate = parseTaskStartDate(task.originalTaskStartDate)
+      const createdByUser = (task.given_by || task.filled_by || "").toLowerCase()
+      return taskDate && taskDate <= today && createdByUser === currentUserName
+    })
+
+    const totalTasks = filteredTasks.length
+    const completedTasks = filteredTasks.filter((task) => task.status === "completed").length
+    const overdueTasks = filteredTasks.filter((task) => task.status === "overdue").length
+    const pendingTasks = totalTasks - completedTasks - overdueTasks
+
+    return { totalTasks, completedTasks, pendingTasks, overdueTasks }
+  })()
+
   const notDoneTask = (displayStats.totalTasks || 0) - (displayStats.completedTasks || 0);
 
   return (
@@ -1140,7 +1175,7 @@ export default function AdminDashboard() {
         <div className="sticky top-0 z-30 bg-white/60 backdrop-blur-xl py-2 border-b border-gray-100/50 shadow-sm transition-all duration-300">
           <div className="max-w-7xl mx-auto">
             <TaskManagementTabs
-              activeTab={mainTab === 'default' ? 'checklist' : mainTab}
+              activeTab={mainTab === 'default' ? (dashboardType === 'delegation' ? 'delegation' : 'checklist') : mainTab}
               setActiveTab={(tabId) => {
                 // Clear current tasks immediately to prevent showing old data on new tab
                 setDepartmentData(prev => ({ ...prev, allTasks: [] }));
@@ -1149,6 +1184,10 @@ export default function AdminDashboard() {
                   setMainTab("default")
                   setDepartmentFilter("all")
                   setDashboardType("checklist")
+                } else if (tabId === 'delegation') {
+                  setMainTab("default")
+                  setDepartmentFilter("all")
+                  setDashboardType("delegation")
                 } else if (tabId === 'maintenance') {
                   setMainTab("maintenance")
                   setDepartmentFilter("Maintenance")
@@ -1196,6 +1235,8 @@ export default function AdminDashboard() {
             isLoadingMore={isLoadingMore}
             hasMoreData={hasMoreData}
             displayStats={displayStats}
+            myTaskStats={myTaskStats}
+            assignedByMeStats={assignedByMeStats}
             notDoneTask={notDoneTask}
             dateRange={dateRange}
             activeTab={activeTab}

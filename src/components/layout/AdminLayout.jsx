@@ -218,13 +218,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
       active: location.pathname === "/dashboard/assign-task",
       showFor: ["admin", "HOD"],
     },
-    {
-      href: "/dashboard/delegation",
-      label: "Delegation",
-      icon: ClipboardList,
-      active: location.pathname === "/dashboard/delegation",
-      showFor: ["admin", "user", "HOD"],
-    },
+
     {
       href: "/dashboard/task",
       label: "Task",

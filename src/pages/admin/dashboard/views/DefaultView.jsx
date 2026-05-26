@@ -30,22 +30,24 @@ export default function DefaultView({
     return (
         <div className="space-y-8">
             {/* Total Tasks Section */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                    <h2 className="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">Department Overview</h2>
+            {userRole?.toLowerCase() !== "user" && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                        <h2 className="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">Department Overview</h2>
+                    </div>
+                    <StatisticsCards
+                        totalTask={displayStats.totalTasks}
+                        completeTask={displayStats.completedTasks}
+                        pendingTask={displayStats.pendingTasks}
+                        overdueTask={displayStats.overdueTasks}
+                        notDoneTask={notDoneTask}
+                        dashboardType={dashboardType}
+                        dateRange={dateRange.filtered ? dateRange : null}
+                        sectionTitle="Total Tasks"
+                        scope="overview"
+                    />
                 </div>
-                <StatisticsCards
-                    totalTask={displayStats.totalTasks}
-                    completeTask={displayStats.completedTasks}
-                    pendingTask={displayStats.pendingTasks}
-                    overdueTask={displayStats.overdueTasks}
-                    notDoneTask={notDoneTask}
-                    dashboardType={dashboardType}
-                    dateRange={dateRange.filtered ? dateRange : null}
-                    sectionTitle="Total Tasks"
-                    scope="overview"
-                />
-            </div>
+            )}
 
             {/* My Tasks Section */}
             <div className="space-y-4">

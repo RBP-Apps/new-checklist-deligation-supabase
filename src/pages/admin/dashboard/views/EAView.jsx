@@ -109,6 +109,7 @@ const EaStatsRow = ({ title, subtitle, stats, theme, scope = "overview" }) => {
 };
 
 export default function EAView() {
+    const userRole = (localStorage.getItem('role') || "").toLowerCase();
     const [eaTasks, setEATasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -406,13 +407,15 @@ export default function EAView() {
 
     return (
         <div className="space-y-6 pb-10 animate-in fade-in duration-500">
-            <EaStatsRow 
-                title="Department Overview" 
-                subtitle="All tasks across the executive department"
-                stats={stats} 
-                theme="indigo" 
-                scope="overview"
-            />
+            {userRole !== 'user' && (
+                <EaStatsRow 
+                    title="Department Overview" 
+                    subtitle="All tasks across the executive department"
+                    stats={stats} 
+                    theme="indigo" 
+                    scope="overview"
+                />
+            )}
 
             <EaStatsRow 
                 title="My Tasks" 

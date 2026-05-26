@@ -1388,7 +1388,10 @@ const AllTasks = () => {
                           </th>
                         )}
                         {tableHeaders.map((header) => (
-                          <th key={header.id} className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          <th 
+                            key={header.id} 
+                            className={`px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap ${header.id === 'status' ? 'min-w-[200px]' : ''}`}
+                          >
                             {header.label}
                           </th>
                         ))}

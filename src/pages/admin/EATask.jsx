@@ -46,11 +46,17 @@ const defaultTask = () => ({
 function TaskCard({ task, index, total, allDoers, onUpdate, onRemove }) {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        onUpdate(task.id, { [name]: value });
+        const updates = { [name]: value };
+        
+        if (name === "frequency" && value === "Custom Date" && !task.customDays) {
+            updates.customDays = 2;
+        }
+
+        onUpdate(task.id, updates);
 
         if (name === "doer_name") {
             const filtered = getFilteredDoers(value);
-            onUpdate(task.id, { doerSuggestions: filtered, showSuggestions: true });
+            onUpdate(task.id, { doerSuggestions: filtered, showSuggestions: true, ...updates });
         }
     };
 

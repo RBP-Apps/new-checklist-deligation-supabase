@@ -295,7 +295,7 @@ const WorkingDataPage = () => {
                         }`}
                     >
                         <Calendar size={16} className={activeTab === 'working-date' ? 'text-blue-600' : 'text-gray-400'} />
-                        Working Date
+                        Daily Time-Sheet
                     </button>
                     <button
                         onClick={() => setActiveTab('history')}
@@ -378,7 +378,7 @@ const WorkingDataPage = () => {
                                 </div>
 
                                 <p className="text-[11px] text-gray-400 font-medium mt-3 italic">
-                                    Select the date and time for your working details submission
+                                    Select the date and time for your daily submission
                                 </p>
                             </div>
                         </div>
@@ -475,7 +475,7 @@ const WorkingDataPage = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                             <div>
                                 <h2 className="text-lg font-black text-gray-900 tracking-tight">Submission History</h2>
-                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-0.5">View previous working date submissions</p>
+                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-0.5">View previous daily time-sheet submissions</p>
                             </div>
 
                             {/* Control Filters */}

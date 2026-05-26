@@ -150,6 +150,9 @@ function TaskCard({ task, index, total, department, doerName, givenBy, dispatch,
         if (name === "frequency" && value === "One Time (No Recurrence)") {
             updates.date = new Date();
         }
+        if (name === "frequency" && value === "Custom Date" && !task.customDays) {
+            updates.customDays = 2;
+        }
         onUpdate(task.id, updates);
     };
 

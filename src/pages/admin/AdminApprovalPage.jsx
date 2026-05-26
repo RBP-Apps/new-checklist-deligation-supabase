@@ -7,7 +7,7 @@ import { fetchPendingMaintenanceApprovals, approveMaintenanceTask, rejectMainten
 import { fetchPendingRepairApprovals, approveRepairTask, rejectRepairTask, fetchApprovedRepairs } from "../../redux/api/repairApi";
 import { fetchPendingEAApprovals, approveEATaskV2, rejectEATask, fetchApprovedEA } from "../../redux/api/eaApi";
 import { fetchPendingChecklistApprovals, approveChecklistTask, rejectChecklistTask, fetchChecklistHistory } from "../../redux/api/quickTaskApi";
-import { CheckCircle2, Search, Play, Pause, AlertCircle, BookCheck, Wrench, Hammer, Briefcase, XCircle, History, Clock, User, Loader2, MessageSquare } from "lucide-react";
+import { CheckCircle2, Search, Play, Pause, AlertCircle, BookCheck, Wrench, Hammer, Briefcase, XCircle, History, Clock, User, Loader2, MessageSquare, FileText, FileSpreadsheet } from "lucide-react";
 import { sendTaskRejectionNotification, sendAdminExtensionRemarkNotification } from "../../services/whatsappService";
 import AudioPlayer from "../../components/AudioPlayer";
 import { useMagicToast } from "../../context/MagicToastContext";
@@ -384,6 +384,29 @@ export default function AdminApprovalPage() {
         }
     };
 
+    const handleProofClick = (url) => {
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.includes('.pdf') || lowerUrl.includes('.xls') || lowerUrl.includes('.csv') || lowerUrl.includes('.doc')) {
+            window.open(url, '_blank');
+        } else {
+            setSelectedImage(url);
+        }
+    };
+
+    const renderProofMedia = (proof) => {
+        const url = proof.url.toLowerCase();
+        if (url.includes('.pdf')) {
+            return <FileText className="w-6 h-6 text-red-500 m-auto mt-3" />;
+        }
+        if (url.includes('.xls') || url.includes('.csv')) {
+            return <FileSpreadsheet className="w-6 h-6 text-green-500 m-auto mt-3" />;
+        }
+        if (url.includes('.doc')) {
+            return <FileText className="w-6 h-6 text-blue-500 m-auto mt-3" />;
+        }
+        return <img src={proof.url} className="w-full h-full object-cover" alt={proof.label} />;
+    };
+
     const filteredTasks = pendingTasks.filter(task => {
         if (!searchTerm) return true;
         const term = searchTerm.toLowerCase();
@@ -687,10 +710,10 @@ export default function AdminApprovalPage() {
                                                             {proofs.map((proof, idx) => (
                                                                 <div key={idx} className="flex flex-col items-center gap-1">
                                                                     <div 
-                                                                        onClick={() => setSelectedImage(proof.url)}
-                                                                        className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 shadow-sm cursor-zoom-in hover:scale-110 transition-transform bg-gray-50"
+                                                                        onClick={() => handleProofClick(proof.url)}
+                                                                        className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 shadow-sm cursor-zoom-in hover:scale-110 transition-transform bg-gray-50 flex items-center justify-center"
                                                                     >
-                                                                        <img src={proof.url} className="w-full h-full object-cover" alt={proof.label} />
+                                                                        {renderProofMedia(proof)}
                                                                     </div>
                                                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{proof.label}</span>
                                                                 </div>
@@ -898,10 +921,10 @@ export default function AdminApprovalPage() {
                                                     {proofs.map((proof, idx) => (
                                                         <div key={idx} className="flex flex-col items-end gap-1">
                                                             <div 
-                                                                onClick={() => setSelectedImage(proof.url)}
-                                                                className="w-14 h-14 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white cursor-zoom-in"
+                                                                onClick={() => handleProofClick(proof.url)}
+                                                                className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 shadow-sm cursor-zoom-in hover:scale-110 transition-transform bg-white flex items-center justify-center"
                                                             >
-                                                                <img src={proof.url} className="w-full h-full object-cover" alt={proof.label} />
+                                                                {renderProofMedia(proof)}
                                                             </div>
                                                             <button 
                                                                 onClick={() => setSelectedImage(proof.url)}

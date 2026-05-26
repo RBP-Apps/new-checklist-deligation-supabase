@@ -305,7 +305,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
     // },
     {
       href: "/dashboard/working-data",
-      label: "Daily Time Sheet",
+      label: "Daily Time-Sheet",
       icon: Database,
       active: location.pathname.includes("/dashboard/working-data"),
       showFor: ["admin", "HOD", "user"],

@@ -154,6 +154,9 @@ const MaintenanceTaskCard = ({
         if (name === "frequency" && val === "one-time") {
             updates.startDate = formatDateISO(new Date());
         }
+        if (name === "frequency" && val === "custom-date" && !task.customDays) {
+            updates.customDays = 2;
+        }
         onUpdate(task.id, updates);
     };
 

@@ -1019,29 +1019,26 @@ const AllTasks = () => {
             const extendedDate = new Date(extendedDateData[id]).toISOString();
             
             // 1. Insert history record
-            const { error: historyError } = await supabase.from('delegation_history').insert([{
-              id: id,
+            const { error: historyError } = await supabase.from('new_delegation_done').insert([{
+              task_id: id,
               name: task?.name || task?.assigned_person || task?.doer_name,
-              department: task?.department,
               task_description: task?.task_description,
               status: "extend", // use extend in history
               reason: remarksData[id] || null,
-              submission_date: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30'),
               image_url: imageUrl,
               given_by: task?.given_by,
-              task_start_date: task?.task_start_date || null,
               duration: task?.duration || null,
-              next_extend_date: extendedDate
+              next_extend_date: extendedDate,
+              admin_done: false
             }]);
             if (historyError) throw historyError;
             
             // 2. Update delegation task
             const { error: updateError } = await supabase.from("new_delegation").update({
               planned_date: extendedDate,
-              next_extend_date: extendedDate,
               status: "extend",
-              reason: remarksData[id] || null,
-              submission_timestamp: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30')
+              remarks: remarksData[id] || null,
+              submission_date: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30')
             }).eq("task_id", id);
             if (updateError) throw updateError;
             
@@ -1060,26 +1057,24 @@ const AllTasks = () => {
             }
           } else if (taskStatus === "done") {
             // 1. Insert history record
-            const { error: historyError } = await supabase.from('delegation_history').insert([{
-              id: id,
+            const { error: historyError } = await supabase.from('new_delegation_done').insert([{
+              task_id: id,
               name: task?.name || task?.assigned_person || task?.doer_name,
-              department: task?.department,
               task_description: task?.task_description,
               status: "pending", // Waiting for admin approval
               reason: remarksData[id] || null,
-              submission_date: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30'),
               image_url: imageUrl,
               given_by: task?.given_by,
-              task_start_date: task?.task_start_date || null,
-              duration: task?.duration || null
+              duration: task?.duration || null,
+              admin_done: false
             }]);
             if (historyError) throw historyError;
             
             // 2. Update delegation task
             const updates = {
               status: "done",
-              reason: remarksData[id] || null,
-              submission_timestamp: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30')
+              remarks: remarksData[id] || null,
+              submission_date: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30')
             };
             if (imageUrl) {
               updates.image = imageUrl;

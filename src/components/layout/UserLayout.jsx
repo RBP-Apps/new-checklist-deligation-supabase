@@ -53,7 +53,7 @@ const UserLayout = ({ children }) => {
       syncProfileImage();
     }
 
-    console.log("UserLayout - Profile Image URL (Cached):", cachedImage);
+    // console.log("UserLayout - Profile Image URL (Cached):", cachedImage);
   }, [navigate, username]) // Added username to dependency to ensure it runs when set
 
   // Logout handler

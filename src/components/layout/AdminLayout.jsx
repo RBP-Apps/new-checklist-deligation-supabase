@@ -184,7 +184,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
       syncProfileData();
     }
 
-    console.log("AdminLayout - Profile Image URL (Cached):", cachedImage);
+    // console.log("AdminLayout - Profile Image URL (Cached):", cachedImage);
 
     // Check if this is the super admin (username = 'admin')
     const normalizedUsername = (storedUsername || "").toLowerCase();

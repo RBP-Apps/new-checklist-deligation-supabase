@@ -40,7 +40,7 @@ const defaultTask = () => ({
     enableReminders: true,
     requireAttachment: false,
     date: new Date(), // Default to today since frequency is 'One Time'
-    time: "09:00",
+    time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
     recordedAudio: null,
     showCalendar: false,
     references: [],

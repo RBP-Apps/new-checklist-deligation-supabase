@@ -568,7 +568,7 @@ export default function AdminDashboard() {
         return;
       }
 
-      console.log(`✅ Fetched ${data.length} TOTAL records for ${mainTab || dashboardType}`);
+      // console.log(`✅ Fetched ${data.length} TOTAL records for ${mainTab || dashboardType}`);
 
       const username = localStorage.getItem("user-name")
       const userRoleLower = (localStorage.getItem("role") || "").toLowerCase()

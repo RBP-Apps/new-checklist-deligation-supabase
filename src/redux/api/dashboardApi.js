@@ -142,7 +142,7 @@ export const fetchDashboardDataApi = async (
       return !holidayDates.includes(dateStr);
     });
 
-    console.log(`Fetched ${filteredData.length} records for ${taskView} view (after holiday filter)`);
+    // console.log(`Fetched ${filteredData.length} records for ${taskView} view (after holiday filter)`);
     return filteredData.map(task => ({
       ...task,
       id: task.id || task.task_id
@@ -498,7 +498,7 @@ export const fetchStaffTasksDataApi = async (dashboardType, staffFilter = null, 
     const to = from + limit;
     const paginatedResults = staffResults.slice(from, to);
 
-    console.log(`Fetched ${paginatedResults.length} staff members with task data for ${month}/${year}`);
+    // console.log(`Fetched ${paginatedResults.length} staff members with task data for ${month}/${year}`);
     return paginatedResults;
 
   } catch (error) {
@@ -566,7 +566,7 @@ export const getStaffTasksCountApi = async (dashboardType, staffFilter = null, d
 
     // Count unique staff names
     const uniqueStaff = new Set(data.map(item => `${item.department}-${item.name}`));
-    console.log(`Total unique staff count for ${month}/${year}: ${uniqueStaff.size}`);
+    // console.log(`Total unique staff count for ${month}/${year}: ${uniqueStaff.size}`);
     return uniqueStaff.size;
 
   } catch (error) {
@@ -622,7 +622,7 @@ export const getTotalUsersCountApi = async (departmentFilter = null) => {
       throw error;
     }
 
-    console.log(`Total users count${departmentFilter && departmentFilter !== 'all' ? ` for department ${departmentFilter}` : ''}: ${count}`);
+    // console.log(`Total users count${departmentFilter && departmentFilter !== 'all' ? ` for department ${departmentFilter}` : ''}: ${count}`);
     return count || 0;
   } catch (error) {
     console.error("Error from Supabase:", error);

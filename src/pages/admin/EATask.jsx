@@ -30,7 +30,7 @@ const defaultTask = () => ({
     phone_number: "",
     given_by: localStorage.getItem("user-name") || "",
     planned_date: "",
-    planned_time: "09:00",
+    planned_time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
     task_description: "",
     duration: "",
     attachment: false,

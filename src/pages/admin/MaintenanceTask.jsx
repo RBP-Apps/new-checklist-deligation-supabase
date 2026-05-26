@@ -46,7 +46,7 @@ const defaultTask = () => ({
     workDescription: "",
     duration: "",
     startDate: formatDateISO(new Date()), // Default to today since frequency is 'one-time'
-    startTime: "09:00",
+    startTime: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
     frequency: "one-time",
     customDays: "",
     enableReminder: true,

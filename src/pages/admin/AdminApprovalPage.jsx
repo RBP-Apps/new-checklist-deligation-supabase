@@ -562,7 +562,7 @@ export default function AdminApprovalPage() {
                                             }`}
                                     >
                                         <History size={12} className="sm:w-[14px] sm:h-[14px]" />
-                                        History
+                                        Completed
                                     </button>
                                 </div>
                                 <div className="relative flex-1 lg:w-64">

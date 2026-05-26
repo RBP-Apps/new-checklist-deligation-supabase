@@ -1815,12 +1815,14 @@ function DelegationDataPage({ isEmbedded = false }) {
                             </td>
                             <td className="px-2 sm:px-6 py-2 sm:py-4">
                               <div className="text-[10px] font-bold">
-                                <span className={`px-2 py-0.5 rounded-full ${task.timeStatus === "Overdue" ? "bg-red-100 text-red-700" :
+                                <span className={`px-2 py-0.5 rounded-full ${
+                                  (task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") ? "bg-amber-100 text-amber-800 border border-amber-200 animate-pulse uppercase font-bold" :
+                                  task.timeStatus === "Overdue" ? "bg-red-100 text-red-700" :
                                   task.timeStatus === "Today" ? "bg-amber-100 text-amber-700" :
                                     task.timeStatus === "Upcoming" ? "bg-blue-100 text-blue-700" :
                                       "bg-gray-100 text-gray-700"
                                   }`}>
-                                  {task.timeStatus}
+                                  {(task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") ? "Extended" : task.timeStatus}
                                 </span>
                               </div>
                             </td>
@@ -2062,12 +2064,14 @@ function DelegationDataPage({ isEmbedded = false }) {
                             />
                             <span className="text-xs font-bold text-purple-800 uppercase tracking-wider">#{task.id}</span>
                           </div>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${task.timeStatus === "Overdue" ? "bg-red-100 text-red-700" :
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            (task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") ? "bg-amber-100 text-amber-800 border border-amber-200 animate-pulse uppercase" :
+                            task.timeStatus === "Overdue" ? "bg-red-100 text-red-700" :
                             task.timeStatus === "Today" ? "bg-amber-100 text-amber-700" :
                               task.timeStatus === "Upcoming" ? "bg-blue-100 text-blue-700" :
                                 "bg-gray-100 text-gray-700"
                             }`}>
-                            {task.timeStatus}
+                            {(task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") ? "Extended" : task.timeStatus}
                           </span>
                         </div>
                         <div className="p-4 space-y-4">

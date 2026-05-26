@@ -890,7 +890,8 @@ const AllTasks = () => {
     // Validate EA & Delegation tasks with extended status must have extended date AND remarks
     if (activeTab === "ea" || activeTab === "delegation") {
       for (const id of selectedArray) {
-        if (statusData[id] === "extended") {
+        const currentStatusLower = String(statusData[id] || '').toLowerCase();
+        if (currentStatusLower.includes('extend')) {
           if (!extendedDateData[id]) {
             showToast("Please provide an extended date for tasks with 'Extend' status", "error");
             return;
@@ -931,8 +932,10 @@ const AllTasks = () => {
         if (activeTab === "ea") {
           const task = tasks.find(t => t.task_id === id);
           const taskStatus = statusData[id] || "done";
+          const isExtendStatus = String(taskStatus).toLowerCase().includes('extend');
+          const isDoneStatus = String(taskStatus).toLowerCase() === 'done';
 
-          if (taskStatus === "extended" && extendedDateData[id]) {
+          if (isExtendStatus && extendedDateData[id]) {
             const extendedDate = new Date(extendedDateData[id]).toISOString();
 
             // 1. Insert extension record into ea_tasks_done (Snapshot - using delegation names)
@@ -978,7 +981,7 @@ const AllTasks = () => {
                 })
               });
             }
-          } else if (taskStatus === "done") {
+          } else if (isDoneStatus) {
             // 1. Insert completion record into ea_tasks_done (Snapshot)
             const { error: doneError = null } = await supabase.from("new_ea_tasks_done").insert([{
               task_id: id,
@@ -1014,48 +1017,38 @@ const AllTasks = () => {
         } else if (activeTab === "delegation") {
           const task = tasks.find(t => t.task_id === id || t.id === id);
           const taskStatus = statusData[id];
+          const taskStatusLower = String(taskStatus || '').toLowerCase();
+          const isExtendStatus = taskStatusLower.includes('extend');
+          const isDoneStatus = taskStatusLower === 'done';
 
-          if (taskStatus === "extended" && extendedDateData[id]) {
-            const extendedDate = new Date(extendedDateData[id]).toISOString();
-            
-            // 1. Insert history record
-            const { error: historyError } = await supabase.from('new_delegation_done').insert([{
-              task_id: id,
-              name: task?.name || task?.assigned_person || task?.doer_name,
-              task_description: task?.task_description,
-              status: "extend", // use extend in history
-              reason: remarksData[id] || null,
-              image_url: imageUrl,
-              given_by: task?.given_by,
-              duration: task?.duration || null,
-              next_extend_date: extendedDate,
-              admin_done: false
-            }]);
-            if (historyError) throw historyError;
-            
-            // 2. Update delegation task
-            const { error: updateError } = await supabase.from("new_delegation").update({
-              planned_date: extendedDate,
+          if (isExtendStatus) {
+            const updates = {
               status: "extend",
               remarks: remarksData[id] || null,
-              submission_date: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30')
-            }).eq("task_id", id);
+              submission_date: null
+            };
+            if (extendedDateData[id]) {
+              updates.planned_date = new Date(extendedDateData[id]).toISOString();
+            }
+            
+            // Update delegation task directly, do not insert into new_delegation_done and set submission_date to null
+            const { error: updateError } = await supabase.from("new_delegation").update(updates).eq("task_id", id);
             if (updateError) throw updateError;
             
             // Send extension notification
             if (task) {
+              const displayDate = extendedDateData[id]
+                ? new Date(extendedDateData[id]).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+                : "—";
               await sendTaskExtensionNotification({
                 doerName: task?.name || task?.assigned_person || task?.doer_name,
                 taskId: id,
                 givenBy: task?.given_by || localStorage.getItem("user-name") || "Admin",
                 description: task?.task_description,
-                nextExtendDate: new Date(extendedDate).toLocaleString('en-IN', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short'
-                })
+                nextExtendDate: displayDate
               });
             }
-          } else if (taskStatus === "done") {
+          } else if (isDoneStatus) {
             // 1. Insert history record
             const { error: historyError } = await supabase.from('new_delegation_done').insert([{
               task_id: id,
@@ -1451,9 +1444,15 @@ const AllTasks = () => {
                                     </td>
                                     <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-800 font-bold">{task.id}</td>
                                     <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm">
-                                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTimeStatus(task.created_at, task.status) === 'Overdue' ? 'bg-red-100 text-red-800' : getTimeStatus(task.created_at, task.status) === 'Today' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                                        {getTimeStatus(task.created_at, task.status)}
-                                      </span>
+                                      {(task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") ? (
+                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-200 animate-pulse uppercase">
+                                          Extended
+                                        </span>
+                                      ) : (
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTimeStatus(task.created_at, task.status) === 'Overdue' ? 'bg-red-100 text-red-800' : getTimeStatus(task.created_at, task.status) === 'Today' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                                          {getTimeStatus(task.created_at, task.status)}
+                                        </span>
+                                      )}
                                     </td>
                                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-800 min-w-[200px]">
                                       <RenderDescription text={task.issue_description} audioUrl={task.audio_url} instructionUrl={task.instruction_attachment_url} instructionType={task.instruction_attachment_type} />
@@ -1522,11 +1521,17 @@ const AllTasks = () => {
                                   <td key={header.id} className={`px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-800 ${header.id === 'task_description' || header.id === 'issue_description' ? 'min-w-[200px] whitespace-normal' : 'whitespace-nowrap'}`}>
                                     {header.id === "time_status"
                                       ? (
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTimeStatus(task[statusDateColumn], task.status) === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                          getTimeStatus(task[statusDateColumn], task.status) === 'Today' ? 'bg-green-100 text-green-800' :
-                                            'bg-blue-100 text-blue-800'}`}>
-                                          {getTimeStatus(task[statusDateColumn], task.status)}
-                                        </span>
+                                        (task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") ? (
+                                          <span className="px-2 inline-flex text-xs leading-5 font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200 shadow-sm animate-pulse uppercase">
+                                            Extended
+                                          </span>
+                                        ) : (
+                                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTimeStatus(task[statusDateColumn], task.status) === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                            getTimeStatus(task[statusDateColumn], task.status) === 'Today' ? 'bg-green-100 text-green-800' :
+                                              'bg-blue-100 text-blue-800'}`}>
+                                            {getTimeStatus(task[statusDateColumn], task.status)}
+                                          </span>
+                                        )
                                       )
                                       : header.id === "task_start_date" || header.id === "created_at" || header.id === "planned_date" || header.id === "updated_at"
                                         ? (
@@ -1537,12 +1542,7 @@ const AllTasks = () => {
                                         )
                                         : (header.id === "id" || header.id === "task_id")
                                           ? (
-                                            <div className="flex items-center gap-2">
-                                              <span className="font-bold text-gray-900">{task[header.id]}</span>
-                                              {(task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") && (
-                                                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-black rounded uppercase tracking-tighter border border-amber-200 shadow-sm animate-pulse">Extended</span>
-                                              )}
-                                            </div>
+                                            <span className="font-bold text-gray-900">{task[header.id]}</span>
                                           )
                                         : header.id === "submission_date"
                                           ? (activeTab === "maintenance" && showHistory)
@@ -1781,15 +1781,18 @@ const AllTasks = () => {
                               />
                             )}
                             <span className="text-xs font-bold text-purple-800 uppercase tracking-wider">#{task.id}</span>
-                            {(task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") && (
-                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-black rounded uppercase tracking-tighter border border-amber-200 animate-pulse">Extended</span>
-                            )}
                           </div>
-                          <span className={`px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full ${getTimeStatus(task[statusDateColumn] || task.created_at, task.status) === 'Overdue' ? 'bg-red-100 text-red-800' :
-                            getTimeStatus(task[statusDateColumn] || task.created_at, task.status) === 'Today' ? 'bg-green-100 text-green-800' :
-                              'bg-blue-100 text-blue-800'}`}>
-                            {getTimeStatus(task[statusDateColumn] || task.created_at, task.status)}
-                          </span>
+                          {(task.status?.toLowerCase() === "extended" || task.status?.toLowerCase() === "extend") ? (
+                            <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200 animate-pulse uppercase">
+                              Extended
+                            </span>
+                          ) : (
+                            <span className={`px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full ${getTimeStatus(task[statusDateColumn] || task.created_at, task.status) === 'Overdue' ? 'bg-red-100 text-red-800' :
+                              getTimeStatus(task[statusDateColumn] || task.created_at, task.status) === 'Today' ? 'bg-green-100 text-green-800' :
+                                'bg-blue-100 text-blue-800'}`}>
+                              {getTimeStatus(task[statusDateColumn] || task.created_at, task.status)}
+                            </span>
+                          )}
                         </div>
 
                         {/* Card Body */}

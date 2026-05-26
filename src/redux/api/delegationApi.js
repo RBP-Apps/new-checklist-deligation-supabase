@@ -12,98 +12,106 @@ export const insertDelegationDoneAndUpdate = createAsyncThunk(
 
       for (const taskData of selectedDataArray) {
         try {
-          // Step 1: Insert into delegation_done table
-          const delegationDoneData = {
-            task_id: taskData.id || taskData.task_id,
-            status: String(taskData.status).toLowerCase() === 'done' ? 'pending' : taskData.status,
-            next_extend_date: taskData.next_extend_date || null,
-            reason: taskData.reason || '',
-            name: taskData.name,
-            task_description: taskData.task_description,
-            given_by: taskData.given_by,
-            duration: taskData.duration || '',
-            image_url: taskData.image || taskData.image_url, // Reverted to image_url for delegation_done table
-            audio_url: taskData.audio_url || null,
-            admin_done: false,
-          };
-
-          console.log('Inserting into delegation_done:', delegationDoneData);
-
-          const { data: doneDataList, error: doneError } = await supabase
-            .from('new_delegation_done')
-            .insert([delegationDoneData])
-            .select();
-
-          if (doneError) {
-            console.error('Error inserting delegation_done:', doneError);
-            throw doneError;
-          }
-
-          const doneData = doneDataList && doneDataList.length > 0 ? doneDataList[0] : null;
-          console.log('Successfully inserted delegation_done:', doneData);
-
-          // Step 2: Handle image upload if exists
+          const statusLower = String(taskData.status || '').toLowerCase();
+          const isExtend = statusLower.includes('extend');
+          const isDone = statusLower === 'done';
+          let doneData = null;
           let imageUrl = taskData.image || taskData.image_url;
-          const taskImage = uploadedImages[taskData.id];
 
-          if (taskImage) {
-            try {
-              console.log('Uploading image for task:', taskData.id);
+          if (!isExtend) {
+            // Step 1: Insert into delegation_done table for 'done' status
+            const delegationDoneData = {
+              task_id: taskData.id || taskData.task_id,
+              status: isDone ? 'pending' : taskData.status,
+              next_extend_date: taskData.next_extend_date || null,
+              reason: taskData.reason || '',
+              name: taskData.name,
+              task_description: taskData.task_description,
+              given_by: taskData.given_by,
+              duration: taskData.duration || '',
+              image_url: taskData.image || taskData.image_url, // Reverted to image_url for delegation_done table
+              audio_url: taskData.audio_url || null,
+              admin_done: false,
+            };
 
-              // Create a unique filename
-              const timestamp = Date.now();
-              const fileName = `delegation_${taskData.id}_${timestamp}_${taskImage.name}`;
+            console.log('Inserting into delegation_done:', delegationDoneData);
 
-              // Upload to Supabase storage using 'checklist' bucket as 'delegation' bucket doesn't exist
-              const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('new_checklist')
-                .upload(fileName, taskImage);
- 
-              if (uploadError) {
-                console.error('Image upload error:', uploadError);
-              } else {
-                // Get public URL from 'checklist' bucket
-                const { data: { publicUrl } } = supabase.storage
+            const { data: doneDataList, error: doneError } = await supabase
+              .from('new_delegation_done')
+              .insert([delegationDoneData])
+              .select();
+
+            if (doneError) {
+              console.error('Error inserting delegation_done:', doneError);
+              throw doneError;
+            }
+
+            doneData = doneDataList && doneDataList.length > 0 ? doneDataList[0] : null;
+            console.log('Successfully inserted delegation_done:', doneData);
+
+            // Step 2: Handle image upload if exists
+            const taskImage = uploadedImages[taskData.id];
+
+            if (taskImage) {
+              try {
+                console.log('Uploading image for task:', taskData.id);
+
+                // Create a unique filename
+                const timestamp = Date.now();
+                const fileName = `delegation_${taskData.id}_${timestamp}_${taskImage.name}`;
+
+                // Upload to Supabase storage using 'checklist' bucket as 'delegation' bucket doesn't exist
+                const { data: uploadData, error: uploadError } = await supabase.storage
                   .from('new_checklist')
-                  .getPublicUrl(fileName);
+                  .upload(fileName, taskImage);
+  
+                if (uploadError) {
+                  console.error('Image upload error:', uploadError);
+                } else {
+                  // Get public URL from 'checklist' bucket
+                  const { data: { publicUrl } } = supabase.storage
+                    .from('new_checklist')
+                    .getPublicUrl(fileName);
 
-                imageUrl = publicUrl;
+                  imageUrl = publicUrl;
 
-                if (doneData) {
-                  // Update delegation_done with correct column name (image_url)
-                  const { error: updateImageError } = await supabase
-                    .from('new_delegation_done')
-                    .update({ image_url: imageUrl })
-                    .eq('id', doneData.id);
+                  if (doneData) {
+                    // Update delegation_done with correct column name (image_url)
+                    const { error: updateImageError } = await supabase
+                      .from('new_delegation_done')
+                      .update({ image_url: imageUrl })
+                      .eq('id', doneData.id);
 
-                  if (updateImageError) {
-                    console.error('Error updating image URL:', updateImageError);
+                    if (updateImageError) {
+                      console.error('Error updating image URL:', updateImageError);
+                    }
                   }
-                }
 
-                console.log('Image uploaded successfully:', imageUrl);
+                  console.log('Image uploaded successfully:', imageUrl);
+                }
+              } catch (imageError) {
+                console.error('Image processing error:', imageError);
               }
-            } catch (imageError) {
-              console.error('Image processing error:', imageError);
             }
           }
 
           // Step 3: Update delegation table based on status
           let delegationUpdate = {
             updated_at: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30'),
-            submission_date: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30'),
-            image: imageUrl, // Keep using 'image' for delegation table as requested
             remarks: taskData.reason
           };
 
-          if (taskData.status === 'done') {
+          if (isDone) {
+            delegationUpdate.submission_date = new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30');
+            delegationUpdate.image = imageUrl;
             delegationUpdate.status = 'done';
             delegationUpdate.admin_done = false;
-          } else if (taskData.status === 'extend') {
+          } else if (isExtend) {
+            delegationUpdate.status = 'extend';
+            delegationUpdate.submission_date = null; // Ensure it's not marked as submitted
             if (taskData.next_extend_date) {
               delegationUpdate.planned_date = new Date(taskData.next_extend_date).toISOString();
               delegationUpdate.task_start_date = delegationUpdate.planned_date;
-              delegationUpdate.status = 'extend';
             }
           }
 

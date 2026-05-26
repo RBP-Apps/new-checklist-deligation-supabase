@@ -761,7 +761,7 @@ export default function AdminDashboard() {
             id: task.id,
             title: task.task_description || task.issue_description || "No Description",
             task_description: task.task_description || task.issue_description,
-            assignedTo: task.name || task.assigned_person || "Unassigned",
+            assignedTo: task.name || task.assigned_person || task.doer_name || "Unassigned",
             taskStartDate: formatDateToDDMMYYYY(taskStartDate || (task.planned_date ? new Date(task.planned_date) : (task.task_start_date ? new Date(task.task_start_date) : (task.created_at ? new Date(task.created_at) : null)))),
             originalTaskStartDate: task.planned_date || task.task_start_date || task.created_at,
             submission_date: task.submission_date,
@@ -1084,7 +1084,7 @@ export default function AdminDashboard() {
   }
 
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  today.setHours(23, 59, 59, 999)
 
   // Calculate filtered stats for cards - same logic as table
   const cardStats = (() => {

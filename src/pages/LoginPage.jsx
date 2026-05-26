@@ -10,6 +10,7 @@ import { useMagicToast } from "../context/MagicToastContext"
 import supabase from "../SupabaseClient"
 import { sendPasswordResetOTP } from "../services/whatsappService"
 import { KeyRound, ShieldCheck, User as UserIcon, ArrowLeft, RefreshCw, Smartphone } from "lucide-react"
+import logoImage from "../assets/logo.jpeg"
 
 const LoginPage = () => {
   const navigate = useNavigate()
@@ -99,11 +100,11 @@ const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4">
       <div className="w-full max-w-md shadow-lg border border-blue-200 rounded-lg bg-white">
         <div className="space-y-1 p-4 bg-gradient-to-r from-blue-100 to-purple-100 rounded-t-lg">
-          {/* <img
-            src="/logo.png"
+          <img
+            src={logoImage}
             alt="Company Logo"
             className="h-auto w-100 mr-3"
-          /> */}
+          />
           <h2 className="text-2xl font-bold text-blue-700 p-2 items-center justify-center">Checklist & Delegation</h2>
         </div>
 

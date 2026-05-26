@@ -48,6 +48,7 @@ const defaultTask = () => ({
     startDate: formatDateISO(new Date()), // Default to today since frequency is 'one-time'
     startTime: "09:00",
     frequency: "one-time",
+    customDays: "",
     enableReminder: true,
     requireAttachment: false,
     recordedAudio: null,
@@ -276,12 +277,10 @@ const MaintenanceTaskCard = ({
                         <select
                             name="givenBy"
                             value={task.givenBy}
-                            onChange={handleChange}
-                            disabled={(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin"))}
-                            className={`w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm ${(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            disabled={true}
+                            className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm opacity-70 cursor-not-allowed"
                         >
-                            <option value="">Select Assign From</option>
-                            {givenBy.map((g, i) => { const val = typeof g === 'object' ? (g.given_by || g.name) : g; return <option key={i} value={val}>{val}</option>; })}
+                            <option value={task.givenBy}>{task.givenBy}</option>
                         </select>
                     </div>
 
@@ -530,19 +529,36 @@ const MaintenanceTaskCard = ({
 
                     {/* Date, Time, Frequency, Duration */}
                     <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Frequency</label>
-                            <select name="frequency" value={task.frequency} onChange={handleChange} className="w-full p-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-xs">
-                                <option value="one-time">One Time</option>
-                                <option value="alternate-day">Alternate Day</option>
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="fortnight">Fortnight</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="quarterly">Quarterly</option>
-                                <option value="half-yearly">Half Yearly</option>
-                                <option value="yearly">Yearly</option>
-                            </select>
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Frequency</label>
+                                <select name="frequency" value={task.frequency} onChange={handleChange} className="w-full p-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-xs">
+                                    <option value="one-time">One Time</option>
+                                    <option value="alternate-day">Alternate Day</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="fortnight">Fortnight</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="quarterly">Quarterly</option>
+                                    <option value="half-yearly">Half Yearly</option>
+                                    <option value="yearly">Yearly</option>
+                                    <option value="custom-date">Custom Date</option>
+                                </select>
+                            </div>
+                            {task.frequency === "custom-date" && (
+                                <div className="w-24">
+                                    <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide" title="Number of Days">Days</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        name="customDays"
+                                        value={task.customDays || ""}
+                                        onChange={handleChange}
+                                        placeholder="e.g. 5"
+                                        className="w-full p-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-xs"
+                                    />
+                                </div>
+                            )}
                         </div>
                         <div className="relative">
                             <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Start Date <span className="text-red-500">*</span></label>
@@ -625,7 +641,7 @@ export default function MaintenanceTask() {
     const [tasks, setTasks] = useState([
         {
             ...defaultTask(),
-            givenBy: (localStorage.getItem("role") === "HOD" || (localStorage.getItem("role") === "admin" && localStorage.getItem("user-name") !== "admin")) ? localStorage.getItem("user-name") : ""
+            givenBy: localStorage.getItem("user-name") || ""
         }
     ]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -649,7 +665,7 @@ export default function MaintenanceTask() {
         const lastTask = prev[prev.length - 1];
         return [...prev, {
             ...defaultTask(),
-            givenBy: (localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : (lastTask?.givenBy || ""),
+            givenBy: localStorage.getItem("user-name") || "",
             doerDepartment: lastTask?.doerDepartment || "",
             doerName: lastTask?.doerName || ""
         }];
@@ -664,7 +680,15 @@ export default function MaintenanceTask() {
     };
 
     const generateDatesForTask = async (task) => {
-        const freq = task.frequency.toLowerCase();
+        let freq = task.frequency.toLowerCase();
+        if (freq === "custom-date") {
+            const interval = parseInt(task.customDays, 10);
+            if (!isNaN(interval) && interval > 0) {
+                freq = `custom-${interval}`;
+            } else {
+                freq = `custom-1`;
+            }
+        }
         const startDate = new Date(task.startDate + 'T00:00:00');
         const generatedList = [];
 
@@ -710,7 +734,7 @@ export default function MaintenanceTask() {
         const isWorkingDay = (d) => workingDaySet.has(getLocalDateString(d));
         const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
 
-        if (freq === 'daily' || freq === 'alternate-day') {
+        if (freq === 'daily' || freq === 'alternate-day' || freq.startsWith('custom-')) {
             const validDays = [];
             let d = new Date(startDate);
             while (d <= endDate) {
@@ -718,7 +742,11 @@ export default function MaintenanceTask() {
                 d.setDate(d.getDate() + 1);
             }
             if (freq === 'daily') validDays.forEach(day => addEntry(day, task.workDescription));
-            else validDays.forEach((day, i) => { if (i % 2 === 0) addEntry(day, task.workDescription); });
+            else if (freq === 'alternate-day') validDays.forEach((day, i) => { if (i % 2 === 0) addEntry(day, task.workDescription); });
+            else if (freq.startsWith('custom-')) {
+                const numberOfDays = parseInt(freq.split('-')[1], 10) || 1;
+                validDays.slice(0, numberOfDays).forEach(day => addEntry(day, task.workDescription));
+            }
         } else {
             let current = new Date(startDate);
             let attempts = 0;

@@ -5,11 +5,11 @@ import { Video, Play, Clock, BookOpen, CheckCircle2 } from 'lucide-react';
 const TrainingPage = () => {
     // Single Training Video Config
     const trainingVideo = {
-        title: 'TaskDesk Complete System Walkthrough',
-        description: 'Watch this comprehensive training video to master all the features of TaskDesk. This guide covers task assignment protocols, checklist verification steps, maintenance reporting, delegation workflows, and the admin dashboard settings overview.',
+        title: 'Checklist & Delegation Complete System Walkthrough',
+        description: 'Watch this comprehensive training video to master all the features of Checklist & Delegation. This guide covers task assignment protocols, checklist verification steps, maintenance reporting, delegation workflows, and the admin dashboard settings overview.',
         duration: '12:45',
         youtubeUrl: 'https://www.youtube.com/embed/v2yqJc1CKBA', // Configurable video link
-        author: 'TaskDesk Onboarding Team'
+        author: 'Checklist & Delegation Onboarding Team'
     };
 
     return (
@@ -23,7 +23,7 @@ const TrainingPage = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl font-black text-gray-900 tracking-tight">System Training & Tutorial</h1>
-                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-0.5">Learn how to manage and perform operations on TaskDesk</p>
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-0.5">Learn how to manage and perform operations on Checklist & Delegation</p>
                         </div>
                     </div>
                 </div>

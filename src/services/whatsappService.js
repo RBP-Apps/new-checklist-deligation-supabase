@@ -74,6 +74,11 @@ const getUserPhoneNumber = async (username) => {
  */
 const sendWhatsAppMessage = async (phoneNumber, message) => {
     try {
+        if (localStorage.getItem('whatsapp_enabled') === 'false') {
+            console.log('WhatsApp Service is temporarily disabled.');
+            return true;
+        }
+
         const formattedPhone = formatPhoneNumber(phoneNumber);
         if (!formattedPhone) {
             console.error('Invalid phone number:', phoneNumber);
@@ -134,6 +139,11 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
  */
 const sendWhatsAppTemplate = async (phoneNumber, templateName, parameters = [], languageCode = 'en') => {
     try {
+        if (localStorage.getItem('whatsapp_enabled') === 'false') {
+            console.log('WhatsApp Service is temporarily disabled.');
+            return true;
+        }
+
         const formattedPhone = formatPhoneNumber(phoneNumber);
         if (!formattedPhone) {
             console.error('Invalid phone number:', phoneNumber);
@@ -205,6 +215,11 @@ const sendWhatsAppTemplate = async (phoneNumber, templateName, parameters = [], 
  */
 const sendWhatsAppVoiceMessage = async (phoneNumber, audioUrl) => {
     try {
+        if (localStorage.getItem('whatsapp_enabled') === 'false') {
+            console.log('WhatsApp Service is temporarily disabled.');
+            return true;
+        }
+
         const formattedPhone = formatPhoneNumber(phoneNumber);
 
         if (!formattedPhone) {

@@ -45,6 +45,11 @@ const isAudioUrl = (url) => {
   );
 };
 
+const isImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return false;
+  return url.match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)(\?.*)?$/i) != null;
+};
+
 const AllTasks = () => {
   const location = useLocation();
   const dispatch = useDispatch();
@@ -143,10 +148,11 @@ const AllTasks = () => {
   // Handle incoming navigation state from dashboard cards
   useEffect(() => {
     if (location.state) {
-      const { filter, tab, showHistory: shouldShowHistory } = location.state;
+      const { filter, tab, showHistory: shouldShowHistory, scope } = location.state;
       if (tab) setActiveTab(tab);
       if (filter) setDateFilter(filter);
       if (shouldShowHistory !== undefined) setShowHistory(shouldShowHistory);
+      if (scope) setTaskScope(scope);
       
       // Clear the state so it doesn't re-trigger if the user refreshes or navigates normally
       window.history.replaceState({}, document.title)
@@ -296,7 +302,7 @@ const AllTasks = () => {
           completionField = "submission_date";
           if (showHistory) {
             headers = [
-              { id: "time_status", label: "Time" },
+              { id: "time_status", label: "Task Status" },
               { id: "id", label: "ID" },
               { id: "task_description", label: "Description" },
               { id: "department", label: "Dept" },
@@ -311,7 +317,7 @@ const AllTasks = () => {
             ];
           } else {
             headers = [
-              { id: "time_status", label: "Time" },
+              { id: "time_status", label: "Task Status" },
               { id: "id", label: "ID" },
               { id: "task_description", label: "Description" },
               { id: "department", label: "Dept" },
@@ -335,7 +341,7 @@ const AllTasks = () => {
           nameField = "assigned_person";
           if (showHistory) {
             headers = [
-              { id: "time_status", label: "Time Status" },
+              { id: "time_status", label: "Task Status" },
               { id: "id", label: "Task ID" },
               { id: "issue_description", label: "Issue Detail" },
               { id: "submission_date", label: "Submission Date" },
@@ -352,7 +358,7 @@ const AllTasks = () => {
           } else {
             headers = [
               { id: "action", label: "Action" },
-              { id: "time_status", label: "Time" },
+              { id: "time_status", label: "Task Status" },
               { id: "id", label: "ID" },
               { id: "issue_description", label: "Detail" },
               { id: "filled_by", label: "Filled By" },
@@ -373,7 +379,7 @@ const AllTasks = () => {
           completionField = "status";
           nameField = "doer_name";
           headers = [
-            { id: "time_status", label: "Time" },
+            { id: "time_status", label: "Task Status" },
             { id: "task_id", label: "ID" },
             { id: "task_description", label: "Description" },
             { id: "department", label: "Dept" },
@@ -392,7 +398,7 @@ const AllTasks = () => {
           dateColumn = "task_start_date"; // task_start_date = original admin start date; used for lte filter in query
           completionField = "submission_date";
           headers = [
-            { id: "time_status", label: "Time" },
+            { id: "time_status", label: "Task Status" },
             { id: "id", label: "ID" },
             { id: "task_description", label: "Description" },
             { id: "department", label: "Dept" },
@@ -411,7 +417,7 @@ const AllTasks = () => {
           dateColumn = "task_start_date"; // task_start_date = original admin start date; used for lte filter in query
           completionField = "submission_date";
           headers = [
-            { id: "time_status", label: "Time" },
+            { id: "time_status", label: "Task Status" },
             { id: "id", label: "ID" },
             { id: "task_description", label: "Description" },
             { id: "department", label: "Dept" },
@@ -842,11 +848,19 @@ const AllTasks = () => {
     }
 
     // =================================================================
-    // NEW LOGIC: Check for mandatory attachments across all tabs
+    // NEW LOGIC: Check for mandatory status and attachments across all tabs
     // =================================================================
     const selectedArray = Array.from(selectedItems);
 
     for (const id of selectedArray) {
+      // 1. Mandatory Status Check
+      if (activeTab === "maintenance" || activeTab === "checklist" || activeTab === "ea" || activeTab === "delegation") {
+        if (!statusData[id]) {
+          showToast(`Please select a status for all selected tasks before submitting.`, "error");
+          return;
+        }
+      }
+
       // Find the specific task object from your tasks state
       const task = tasks.find((t) => t.id === id || t.task_id === id);
 
@@ -860,8 +874,7 @@ const AllTasks = () => {
           task.attachment === true;
 
         // Check if the user has selected a status of "Done" or "yes"
-        // (You might not want to enforce attachment if they mark it "Not Done", but remove this extra condition if you want it strictly required on ANY submission)
-        const currentStatus = statusData[id] || ((activeTab === "checklist" || activeTab === "delegation") ? "yes" : "Done");
+        const currentStatus = statusData[id] || "";
         const isMarkedDone = ["done", "yes", "completed"].includes(currentStatus.toLowerCase());
 
         // If attachment is required, status is Done, and NO image is uploaded, block submission
@@ -874,8 +887,8 @@ const AllTasks = () => {
     // =================================================================
 
     // Validate EA tasks with extended status must have extended date
-    // Validate EA tasks with extended status must have extended date AND remarks
-    if (activeTab === "ea") {
+    // Validate EA & Delegation tasks with extended status must have extended date AND remarks
+    if (activeTab === "ea" || activeTab === "delegation") {
       for (const id of selectedArray) {
         if (statusData[id] === "extended") {
           if (!extendedDateData[id]) {
@@ -998,12 +1011,88 @@ const AllTasks = () => {
             const { error: updateError = null } = await supabase.from("new_ea_tasks").update(updates).eq("task_id", id);
             if (updateError) throw updateError;
           }
+        } else if (activeTab === "delegation") {
+          const task = tasks.find(t => t.task_id === id || t.id === id);
+          const taskStatus = statusData[id];
+
+          if (taskStatus === "extended" && extendedDateData[id]) {
+            const extendedDate = new Date(extendedDateData[id]).toISOString();
+            
+            // 1. Insert history record
+            const { error: historyError } = await supabase.from('delegation_history').insert([{
+              id: id,
+              name: task?.name || task?.assigned_person || task?.doer_name,
+              department: task?.department,
+              task_description: task?.task_description,
+              status: "extend", // use extend in history
+              reason: remarksData[id] || null,
+              submission_date: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30'),
+              image_url: imageUrl,
+              given_by: task?.given_by,
+              task_start_date: task?.task_start_date || null,
+              duration: task?.duration || null,
+              next_extend_date: extendedDate
+            }]);
+            if (historyError) throw historyError;
+            
+            // 2. Update delegation task
+            const { error: updateError } = await supabase.from("new_delegation").update({
+              planned_date: extendedDate,
+              next_extend_date: extendedDate,
+              status: "extend",
+              reason: remarksData[id] || null,
+              submission_timestamp: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30')
+            }).eq("task_id", id);
+            if (updateError) throw updateError;
+            
+            // Send extension notification
+            if (task) {
+              await sendTaskExtensionNotification({
+                doerName: task?.name || task?.assigned_person || task?.doer_name,
+                taskId: id,
+                givenBy: task?.given_by || localStorage.getItem("user-name") || "Admin",
+                description: task?.task_description,
+                nextExtendDate: new Date(extendedDate).toLocaleString('en-IN', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short'
+                })
+              });
+            }
+          } else if (taskStatus === "done") {
+            // 1. Insert history record
+            const { error: historyError } = await supabase.from('delegation_history').insert([{
+              id: id,
+              name: task?.name || task?.assigned_person || task?.doer_name,
+              department: task?.department,
+              task_description: task?.task_description,
+              status: "pending", // Waiting for admin approval
+              reason: remarksData[id] || null,
+              submission_date: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30'),
+              image_url: imageUrl,
+              given_by: task?.given_by,
+              task_start_date: task?.task_start_date || null,
+              duration: task?.duration || null
+            }]);
+            if (historyError) throw historyError;
+            
+            // 2. Update delegation task
+            const updates = {
+              status: "done",
+              reason: remarksData[id] || null,
+              submission_timestamp: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30')
+            };
+            if (imageUrl) {
+              updates.image = imageUrl;
+            }
+            const { error: updateError } = await supabase.from("new_delegation").update(updates).eq("task_id", id);
+            if (updateError) throw updateError;
+          }
         } else {
           // Original logic for other task types
           const updates = {
             [completionField]: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30'),
             [remarksField]: remarksData[id] || null,
-            status: statusData[id] || ((activeTab === "checklist" || activeTab === "delegation") ? "yes" : "Done"),
+            status: statusData[id] || (activeTab === "checklist" ? "yes" : "Done"),
             admin_done: false
           };
           if (imageUrl) {
@@ -1094,9 +1183,8 @@ const AllTasks = () => {
                 }} />
               </div>
 
-              {activeTab !== "delegation" && (
-                <div className="flex flex-wrap items-center gap-2 flex-grow justify-end">
-                  <div className="relative flex-grow max-w-sm">
+              <div className="flex flex-wrap items-center gap-2 flex-grow justify-end">
+                <div className="relative flex-grow max-w-sm">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                   <input
                     type="text"
@@ -1213,16 +1301,12 @@ const AllTasks = () => {
                   )}
                 </div>
               </div>
-              )}
             </div>
           </div>
         </div>
 
-        {activeTab === "delegation" ? (
-          <DelegationDataPage isEmbedded={true} />
-        ) : (
-          <>
-            {/* Success Message */}
+        <>
+          {/* Success Message */}
         {successMessage && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 sm:px-4 py-3 rounded-md flex items-center justify-between text-sm sm:text-base animate-in fade-in duration-300">
             <div className="flex items-center">
@@ -1308,13 +1392,13 @@ const AllTasks = () => {
                             {header.label}
                           </th>
                         ))}
-                        {!showHistory && activeTab === "ea" && (
+                        {!showHistory && (activeTab === "ea" || activeTab === "delegation") && (
                           <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Extended Date</th>
                         )}
                         {!showHistory && activeTab !== "repair" && (
                           <>
                             <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Remarks</th>
-                            <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Image</th>
+                            <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Document</th>
                           </>
                         )}
                         {showHistory && (
@@ -1482,21 +1566,21 @@ const AllTasks = () => {
                                                   style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em` }}
                                                 >
                                                   <option value="">Select Status</option>
-                                                  {activeTab === "ea" ? (
+                                                  {activeTab === "ea" || activeTab === "delegation" ? (
                                                     <>
                                                       <option value="done">Done</option>
                                                       <option value="extended">Extend</option>
                                                     </>
                                                   ) : (
                                                     <>
-                                                      <option value={(activeTab === 'checklist' || activeTab === 'delegation') ? 'yes' : 'Done'}>Done</option>
-                                                      <option value={(activeTab === 'checklist' || activeTab === 'delegation') ? 'no' : 'Not Done'}>Not Done</option>
+                                                      <option value={activeTab === 'checklist' ? 'yes' : 'Done'}>Done</option>
+                                                      <option value={activeTab === 'checklist' ? 'no' : 'Not Done'}>Not Done</option>
                                                     </>
                                                   )}
                                                 </select>
                                               )
                                               : (
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${activeTab === "ea"
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${activeTab === "ea" || activeTab === "delegation"
                                                   ? (task[header.id]?.toLowerCase() === "approved" ? "bg-green-100 text-green-800" : task[header.id]?.toLowerCase() === "done" ? "bg-orange-100 text-orange-800" : (task[header.id]?.toLowerCase() === "pending" || task[header.id]?.toLowerCase() === "extend" || task[header.id]?.toLowerCase() === "extended") ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-800")
                                                   : (task[header.id] === "Done" || task[header.id] === "yes" || task[header.id] === "done" || task[header.id] === "approved" || task[header.id] === "Completed")
                                                     ? (task.admin_done ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800")
@@ -1504,7 +1588,7 @@ const AllTasks = () => {
                                                       ? "bg-yellow-100 text-yellow-800"
                                                       : "bg-gray-100 text-gray-800"
                                                   }`}>
-                                                  {activeTab === "ea" && showHistory
+                                                  {(activeTab === "ea" || activeTab === "delegation") && showHistory
                                                     ? (task[header.id]?.toLowerCase() === "approved" || (task[header.id]?.toLowerCase() === "done" && task.admin_done) ? "Completed" : task[header.id]?.toLowerCase() === "done" ? "Pending Approval" : (task[header.id]?.toLowerCase() === "extended" || task[header.id]?.toLowerCase() === "extend") ? "Extended" : task[header.id])
                                                     : (showHistory && (task[header.id] === "Done" || task[header.id] === "yes" || task[header.id] === "done" || task[header.id] === "Completed") && !task.admin_done)
                                                       ? "Pending Approval"
@@ -1548,7 +1632,7 @@ const AllTasks = () => {
                                                           ? task[header.id] ? <a href={task[header.id]} target="_blank" rel="noopener noreferrer" className="text-purple-600 underline">View</a> : "—"
                                                           : task[header.id] || "—"}</td>
                                 ))}
-                                {!showHistory && activeTab === "ea" && (
+                                {!showHistory && (activeTab === "ea" || activeTab === "delegation") && (
                                   <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-800">
                                     <input
                                       type="date"
@@ -1736,15 +1820,15 @@ const AllTasks = () => {
                                     className="w-full text-xs border-gray-200 rounded-md py-1 focus:ring-purple-400"
                                   >
                                     <option value="">Status</option>
-                                    {activeTab === "ea" ? (
+                                    {activeTab === "ea" || activeTab === "delegation" ? (
                                       <>
                                         <option value="done">Done</option>
                                         <option value="extended">Extend</option>
                                       </>
                                     ) : (
                                       <>
-                                        <option value={(activeTab === 'checklist' || activeTab === 'delegation') ? 'yes' : 'Done'}>Done</option>
-                                        <option value={(activeTab === 'checklist' || activeTab === 'delegation') ? 'no' : 'Not Done'}>Not Done</option>
+                                        <option value={activeTab === 'checklist' ? 'yes' : 'Done'}>Done</option>
+                                        <option value={activeTab === 'checklist' ? 'no' : 'Not Done'}>Not Done</option>
                                       </>
                                     )}
                                   </select>
@@ -1856,7 +1940,7 @@ const AllTasks = () => {
                           )}
 
                           {/* Repair Process Button */}
-                          {!showHistory && activeTab === "repair" && (
+                          {!showHistory && (activeTab === "repair" || activeTab === "ea" || activeTab === "delegation") && (
                             <div className="pt-2">
                               <button
                                 onClick={() => openUpdateModal(task)}
@@ -1874,24 +1958,36 @@ const AllTasks = () => {
                               <div className="flex flex-wrap gap-3">
                                 {(task.work_photo_url || task.image_url || task.uploaded_image_url) && (
                                   <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] text-gray-500 font-medium">Work Photo</span>
-                                    <img
-                                      src={task.work_photo_url || task.image_url || task.uploaded_image_url}
-                                      alt="Work"
-                                      className="w-24 h-24 object-cover rounded-lg border-2 border-purple-100 shadow-sm cursor-zoom-in"
-                                      onClick={() => setLightboxImage({ url: task.work_photo_url || task.image_url || task.uploaded_image_url, name: "Work Photo" })}
-                                    />
+                                    <span className="text-[10px] text-gray-500 font-medium">Work Document</span>
+                                    {isImageUrl(task.work_photo_url || task.image_url || task.uploaded_image_url) ? (
+                                      <img
+                                        src={task.work_photo_url || task.image_url || task.uploaded_image_url}
+                                        alt="Work"
+                                        className="w-24 h-24 object-cover rounded-lg border-2 border-purple-100 shadow-sm cursor-zoom-in"
+                                        onClick={() => setLightboxImage({ url: task.work_photo_url || task.image_url || task.uploaded_image_url, name: "Work Document" })}
+                                      />
+                                    ) : (
+                                      <a href={task.work_photo_url || task.image_url || task.uploaded_image_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-24 h-24 bg-purple-50 text-purple-600 rounded-lg border-2 border-purple-100 shadow-sm hover:bg-purple-100 transition-colors text-xs font-medium text-center px-2">
+                                        View File
+                                      </a>
+                                    )}
                                   </div>
                                 )}
                                 {task.bill_copy_url && (
                                   <div className="flex flex-col gap-1">
                                     <span className="text-[10px] text-gray-500 font-medium">Bill Copy</span>
-                                    <img
-                                      src={task.bill_copy_url}
-                                      alt="Bill"
-                                      className="w-24 h-24 object-cover rounded-lg border-2 border-blue-100 shadow-sm cursor-zoom-in"
-                                      onClick={() => setLightboxImage({ url: task.bill_copy_url, name: "Bill Copy" })}
-                                    />
+                                    {isImageUrl(task.bill_copy_url) ? (
+                                      <img
+                                        src={task.bill_copy_url}
+                                        alt="Bill"
+                                        className="w-24 h-24 object-cover rounded-lg border-2 border-blue-100 shadow-sm cursor-zoom-in"
+                                        onClick={() => setLightboxImage({ url: task.bill_copy_url, name: "Bill Copy" })}
+                                      />
+                                    ) : (
+                                      <a href={task.bill_copy_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-24 h-24 bg-blue-50 text-blue-600 rounded-lg border-2 border-blue-100 shadow-sm hover:bg-blue-100 transition-colors text-xs font-medium text-center px-2">
+                                        View File
+                                      </a>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -2046,13 +2142,13 @@ const AllTasks = () => {
                             {(selectedUpdateTask.require_attachment || selectedUpdateTask.attachment) && <span className="text-red-500 ml-1">*</span>}
                           </span>
                           <span className="text-[10px] text-gray-400 mt-1">{updateForm.workPhoto ? updateForm.workPhoto.name : "Click to upload"}</span>
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => setUpdateForm({ ...updateForm, workPhoto: e.target.files[0] })} />
+                          <input type="file" className="hidden" onChange={(e) => setUpdateForm({ ...updateForm, workPhoto: e.target.files[0] })} />
                         </label>
                         <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                           <Upload className="h-6 w-6 text-gray-400 mb-2" />
                           <span className="text-xs font-bold text-gray-500">Bill Copy</span>
                           <span className="text-[10px] text-gray-400 mt-1">{updateForm.billCopy ? updateForm.billCopy.name : "Click to upload"}</span>
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => setUpdateForm({ ...updateForm, billCopy: e.target.files[0] })} />
+                          <input type="file" className="hidden" onChange={(e) => setUpdateForm({ ...updateForm, billCopy: e.target.files[0] })} />
                         </label>
                       </div>
                     </div>
@@ -2080,7 +2176,6 @@ const AllTasks = () => {
           </div>
         )}
       </>
-      )}
       </div>
 
       {/* Image Lightbox */}

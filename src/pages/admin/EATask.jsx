@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../components/layout/AdminLayout";
-import { Users, Calendar, Save, ArrowLeft, Loader2, Mic, Square, Trash2, Plus, CheckCircle2, X, Clock } from "lucide-react";
+import { Users, Calendar, Save, ArrowLeft, Loader2, Mic, Square, Trash2, Plus, CheckCircle2, X, Clock, Phone } from "lucide-react";
 import { ReactMediaRecorder } from "react-media-recorder";
 import AudioPlayer from "../../components/AudioPlayer";
 import supabase from "../../SupabaseClient";
@@ -22,13 +22,13 @@ const formatDateISO = (date) => {
     return `${year}-${month}-${day}`;
 };
 
-const DEFAULT_DOER_NAME = "Sonali Dutta";
+const FREQUENCY_OPTIONS = ["One Time (No Recurrence)", "Custom Date"];
 
 const defaultTask = () => ({
     id: Date.now() + Math.random(),
-    doer_name: DEFAULT_DOER_NAME,
+    doer_name: "",
     phone_number: "",
-    given_by: (localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : "",
+    given_by: localStorage.getItem("user-name") || "",
     planned_date: "",
     planned_time: "09:00",
     task_description: "",
@@ -38,6 +38,8 @@ const defaultTask = () => ({
     showCalendar: false,
     showSuggestions: false,
     doerSuggestions: [],
+    frequency: "One Time (No Recurrence)",
+    customDays: "",
 });
 
 // Single Task Card Component
@@ -139,9 +141,8 @@ function TaskCard({ task, index, total, allDoers, onUpdate, onRemove }) {
                         type="text"
                         name="given_by"
                         value={task.given_by}
-                        onChange={(e) => onUpdate(task.id, { given_by: e.target.value })}
-                        disabled={(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin"))}
-                        className={`w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm ${(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        disabled={true}
+                        className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm opacity-70 cursor-not-allowed"
                         placeholder="Enter assigner name"
                     />
                 </div>
@@ -188,8 +189,35 @@ function TaskCard({ task, index, total, allDoers, onUpdate, onRemove }) {
                     )}
                 </div>
 
-                {/* Date, Time & Duration */}
+                {/* Date, Time, Duration & Frequency */}
                 <div className="grid grid-cols-2 gap-3">
+                    <div className="flex gap-2">
+                        <div className="flex-1">
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Frequency</label>
+                            <select
+                                name="frequency"
+                                value={task.frequency}
+                                onChange={handleInputChange}
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-xs"
+                            >
+                                {FREQUENCY_OPTIONS.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                        {task.frequency === "Custom Date" && (
+                            <div className="w-24">
+                                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide" title="Number of Days">Days</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    name="customDays"
+                                    value={task.customDays || ""}
+                                    onChange={handleInputChange}
+                                    placeholder="e.g. 5"
+                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-xs"
+                                />
+                            </div>
+                        )}
+                    </div>
                     <div className="relative">
                         <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
                             Planned Date <span className="text-red-500">*</span>
@@ -397,15 +425,6 @@ export default function EATask() {
         combined.sort((a, b) => a.name.localeCompare(b.name));
         if (combined.length !== allDoers.length || allDoers.length === 0) {
             setAllDoers(combined);
-            // Auto-fill phone for tasks that have the default doer but no phone yet
-            const defaultDoer = combined.find(d => d.name === DEFAULT_DOER_NAME);
-            if (defaultDoer) {
-                setTasks(prev => prev.map(t =>
-                    t.doer_name === DEFAULT_DOER_NAME && !t.phone_number
-                        ? { ...t, phone_number: defaultDoer.phone }
-                        : t
-                ));
-            }
         }
     }, [historicalDoers, userData]);
 
@@ -428,14 +447,46 @@ export default function EATask() {
             const lastTask = prev[prev.length - 1];
             return [...prev, {
                 ...defaultTask(),
-                doer_name: lastTask?.doer_name || DEFAULT_DOER_NAME,
-                phone_number: lastTask?.phone_number || ""
+                doer_name: lastTask?.doer_name || "",
+                phone_number: lastTask?.phone_number || "",
+                frequency: "One Time (No Recurrence)",
+                customDays: ""
             }];
         });
     };
 
     const removeTask = (id) => {
         setTasks(prev => prev.filter(t => t.id !== id));
+    };
+
+    const generateDatesForTask = (task) => {
+        const startDate = new Date(`${task.planned_date}T00:00:00`);
+        const dates = [];
+        
+        if (task.frequency === "One Time (No Recurrence)") {
+            dates.push(new Date(startDate));
+            return dates;
+        }
+        
+        if (task.frequency === "Custom Date") {
+            const numberOfDays = parseInt(task.customDays, 10);
+            const daysToGenerate = (!isNaN(numberOfDays) && numberOfDays > 0) ? numberOfDays : 1;
+            
+            let d = new Date(startDate);
+            let count = 0;
+            
+            while (count < daysToGenerate) {
+                const dateStr = formatDateISO(d);
+                // Skip holidays for custom date recurrence
+                if (!holidays.includes(dateStr)) {
+                    dates.push(new Date(d));
+                    count++;
+                }
+                d.setDate(d.getDate() + 1);
+            }
+        }
+        
+        return dates;
     };
 
     const handleSubmitAll = async () => {
@@ -501,20 +552,29 @@ export default function EATask() {
             }, {});
 
             // 2. Prepare tasks for insertion
-            const tasksToInsert = tasks.map(task => {
-                const startDate = new Date(`${task.planned_date}T${task.planned_time || "00:00"}:00`);
-                return {
-                    doer_name: task.doer_name,
-                    phone_number: task.phone_number,
-                    planned_date: startDate.toISOString(),
-                    task_start_date: startDate.toISOString(),
-                    task_description: task.task_description,
-                    audio_url: audioUrlMap[task.id],
-                    duration: task.duration || null,
-                    status: 'pending',
-                    given_by: task.given_by,
-                    attachment: task.attachment
-                };
+            const tasksToInsert = [];
+            tasks.forEach(task => {
+                const generatedDates = generateDatesForTask(task);
+                
+                generatedDates.forEach(date => {
+                    const taskStart = new Date(date);
+                    const [hours, minutes] = (task.planned_time || "00:00").split(':');
+                    taskStart.setHours(parseInt(hours, 10));
+                    taskStart.setMinutes(parseInt(minutes, 10));
+                    
+                    tasksToInsert.push({
+                        doer_name: task.doer_name,
+                        phone_number: task.phone_number,
+                        planned_date: taskStart.toISOString(),
+                        task_start_date: taskStart.toISOString(),
+                        task_description: task.task_description,
+                        audio_url: audioUrlMap[task.id],
+                        duration: task.duration || null,
+                        status: 'pending',
+                        given_by: task.given_by,
+                        attachment: task.attachment
+                    });
+                });
             });
 
             // 3. Chunked Database Inserts (100 per chunk, though EA usually has fewer)

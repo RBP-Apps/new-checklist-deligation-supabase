@@ -184,12 +184,10 @@ function RepairTaskCard({ task, index, total, givenBy, userData, machineOptions,
                     <select
                         name="filledBy"
                         value={task.filledBy}
-                        onChange={handleChange}
-                        disabled={(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin"))}
-                        className={`w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm ${(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        disabled={true}
+                        className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm opacity-70 cursor-not-allowed"
                     >
-                        <option value="">Select person...</option>
-                        {givenBy.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        <option value={task.filledBy}>{task.filledBy}</option>
                     </select>
                 </div>
 
@@ -327,7 +325,7 @@ export default function RepairTask() {
     const [tasks, setTasks] = useState([
         { 
             ...defaultTask(), 
-            filledBy: (localStorage.getItem("role") === "HOD" || (localStorage.getItem("role") === "admin" && localStorage.getItem("user-name") !== "admin")) ? localStorage.getItem("user-name") : "" 
+            filledBy: localStorage.getItem("user-name") || "" 
         }
     ]);
     const [holidays, setHolidays] = useState([]);
@@ -372,7 +370,7 @@ export default function RepairTask() {
         const lastTask = prev[prev.length - 1];
         return [...prev, {
             ...defaultTask(),
-            filledBy: (localStorage.getItem("role") === "HOD" || (localStorage.getItem("role") === "admin" && localStorage.getItem("user-name") !== "admin")) ? localStorage.getItem("user-name") : (lastTask?.filledBy || ""),
+            filledBy: localStorage.getItem("user-name") || "",
             assignedPerson: lastTask?.assignedPerson || ""
         }];
     });

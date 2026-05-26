@@ -125,13 +125,14 @@ const WorkingDataPage = () => {
     const convertSlotToTime = (timeStr) => {
         const [time, modifier] = timeStr.split(' ');
         let [hours, minutes] = time.split(':');
+        
         if (hours === '12') {
-            hours = '00';
+            hours = modifier === 'AM' ? '00' : '12';
+        } else if (modifier === 'PM') {
+            hours = String(parseInt(hours, 10) + 12);
         }
-        if (modifier === 'PM' && hours !== '00') {
-            hours = parseInt(hours, 10) + 12;
-        }
-        return `${String(hours).padStart(2, '0')}:${minutes}:00`;
+        
+        return `${hours.padStart(2, '0')}:${minutes}:00`;
     };
 
     // Submit Working Details logic
@@ -150,7 +151,7 @@ const WorkingDataPage = () => {
                     name_of_person: loggedInUser,
                     working_details: scheduleInputs[slot].working_details,
                     qty: scheduleInputs[slot].qty || '-',
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date(new Date().getTime() + (330 * 60000)).toISOString().replace('Z', '+05:30')
                 };
             });
 

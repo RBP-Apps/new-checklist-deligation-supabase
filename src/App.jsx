@@ -36,16 +36,21 @@ import RealtimeLogoutListener from "./components/RealtimeLogoutListener"
 import { MagicToastProvider } from "./context/MagicToastContext"
 
 // --- Auth Wrapper ---
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+const ProtectedRoute = ({ children, allowedRoles = [], allowIfSelfAssign = false }) => {
     const username = (localStorage.getItem("user-name") || "").toLowerCase();
     const role = (localStorage.getItem("role") || "").toLowerCase();
+    const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
 
     if (!username) {
         return <Navigate to="/login" replace />
     }
 
     if (allowedRoles.length > 0 && !allowedRoles.map(r => r.toLowerCase()).includes(role)) {
-        return <Navigate to="/dashboard/admin" replace />
+        if (allowIfSelfAssign && canSelfAssign) {
+            // Bypass role check for this route
+        } else {
+            return <Navigate to="/dashboard/admin" replace />
+        }
     }
 
     return children
@@ -101,7 +106,7 @@ function App() {
                     <Route
                         path="/dashboard/assign-task"
                         element={
-                            <ProtectedRoute allowedRoles={["admin", "HOD"]}>
+                            <ProtectedRoute allowedRoles={["admin", "HOD"]} allowIfSelfAssign={true}>
                                 <AdminAssignTask />
                             </ProtectedRoute>
                         }

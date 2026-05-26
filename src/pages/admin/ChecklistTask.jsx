@@ -25,7 +25,7 @@ const formatDateISO = (date) => {
 
 const FREQUENCY_OPTIONS = [
     "One Time (No Recurrence)", "Alternate Day", "Daily", "Weekly",
-    "Fortnight", "Monthly", "Quarterly", "Half Yearly", "Yearly"
+    "Fortnight", "Monthly", "Quarterly", "Half Yearly", "Yearly", "Custom Date"
 ];
 
 const defaultTask = () => ({
@@ -35,6 +35,7 @@ const defaultTask = () => ({
     doer: "",
     description: "",
     frequency: "One Time (No Recurrence)",
+    customDays: "",
     duration: "",
     enableReminders: true,
     requireAttachment: false,
@@ -234,12 +235,10 @@ function TaskCard({ task, index, total, department, doerName, givenBy, dispatch,
                         <select
                             name="givenBy"
                             value={task.givenBy}
-                            onChange={handleChange}
-                            disabled={(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin"))}
-                            className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-sm ${(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            disabled={true}
+                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-sm opacity-70 cursor-not-allowed"
                         >
-                            <option value="">Select Assign From</option>
-                            {givenBy.map((g, i) => <option key={i} value={g}>{g}</option>)}
+                            <option value={task.givenBy}>{task.givenBy}</option>
                         </select>
                     </div>
                 </div>
@@ -389,17 +388,33 @@ function TaskCard({ task, index, total, department, doerName, givenBy, dispatch,
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Frequency</label>
-                        <select
-                            name="frequency"
-                            value={task.frequency}
-                            onChange={handleChange}
-                            disabled={task.frequencyLocked}
-                            className={`w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-xs ${task.frequencyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        >
-                            {FREQUENCY_OPTIONS.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
-                        </select>
+                    <div className="flex gap-2">
+                        <div className="flex-1">
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Frequency</label>
+                            <select
+                                name="frequency"
+                                value={task.frequency}
+                                onChange={handleChange}
+                                disabled={task.frequencyLocked}
+                                className={`w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-xs ${task.frequencyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {FREQUENCY_OPTIONS.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                        {task.frequency === "Custom Date" && (
+                            <div className="w-24">
+                                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide" title="Number of Days">Days</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    name="customDays"
+                                    value={task.customDays || ""}
+                                    onChange={handleChange}
+                                    placeholder="e.g. 5"
+                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-xs"
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="relative">
@@ -500,7 +515,7 @@ export default function ChecklistTask() {
     const [tasks, setTasks] = useState([
         {
             ...defaultTask(),
-            givenBy: (localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : ""
+            givenBy: localStorage.getItem("user-name") || ""
         }
     ]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -546,7 +561,7 @@ export default function ChecklistTask() {
         return [...prev, {
             ...defaultTask(),
             department: lastTask?.department || "",
-            givenBy: (localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : (lastTask?.givenBy || ""),
+            givenBy: localStorage.getItem("user-name") || "",
             doer: lastTask?.doer || ""
         }];
     });
@@ -561,7 +576,8 @@ export default function ChecklistTask() {
         "Monthly": "monthly",
         "Quarterly": "quarterly",
         "Half Yearly": "half-yearly",
-        "Yearly": "yearly"
+        "Yearly": "yearly",
+        "Custom Date": "custom-date"
     };
 
     const getLocalDateString = (date) => {
@@ -573,7 +589,15 @@ export default function ChecklistTask() {
     };
 
     const generateDatesForTask = async (task) => {
-        const freqKey = freqMap[task.frequency] || "one-time";
+        let freqKey = freqMap[task.frequency] || "one-time";
+        if (task.frequency === "Custom Date") {
+            const interval = parseInt(task.customDays, 10);
+            if (!isNaN(interval) && interval > 0) {
+                freqKey = `custom-${interval}`;
+            } else {
+                freqKey = `custom-1`;
+            }
+        }
         const dates = [];
         const startDate = task.date;
         const time = task.time;
@@ -610,7 +634,7 @@ export default function ChecklistTask() {
             return dates;
         }
 
-        if (freqKey === 'daily' || freqKey === 'alternate-day') {
+        if (freqKey === 'daily' || freqKey === 'alternate-day' || freqKey.startsWith('custom-')) {
             const validDays = [];
             let d = new Date(startDate);
             while (d <= endDate) {
@@ -618,7 +642,11 @@ export default function ChecklistTask() {
                 d.setDate(d.getDate() + 1);
             }
             if (freqKey === 'daily') validDays.forEach(day => dates.push(toLocalISO(day)));
-            else validDays.forEach((day, i) => { if (i % 2 === 0) dates.push(toLocalISO(day)); });
+            else if (freqKey === 'alternate-day') validDays.forEach((day, i) => { if (i % 2 === 0) dates.push(toLocalISO(day)); });
+            else if (freqKey.startsWith('custom-')) {
+                const numberOfDays = parseInt(freqKey.split('-')[1], 10) || 1;
+                validDays.slice(0, numberOfDays).forEach(day => dates.push(toLocalISO(day)));
+            }
         } else {
             let current = new Date(startDate);
             let attempts = 0;

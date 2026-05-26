@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Award,
   Video,
+  MessageCircle,
 } from "lucide-react";
 
 export default function AdminLayout({ children, darkMode, toggleDarkMode, showLayout = true }) {
@@ -43,8 +44,18 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
   const [userEmail, setUserEmail] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [profileImage, setProfileImage] = useState("");
+  const [isWhatsAppEnabled, setIsWhatsAppEnabled] = useState(localStorage.getItem('whatsapp_enabled') !== 'false');
+  const [canSelfAssignState, setCanSelfAssignState] = useState(localStorage.getItem("can_self_assign") === "true");
 
   const [isUserPopupOpen, setIsUserPopupOpen] = useState(false);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setIsWhatsAppEnabled(localStorage.getItem('whatsapp_enabled') !== 'false');
+    };
+    window.addEventListener('whatsapp_toggled', handleStorageChange);
+    return () => window.removeEventListener('whatsapp_toggled', handleStorageChange);
+  }, []);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -79,10 +90,25 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
     ];
 
     const storedRoleLower = (storedRole || "user").toLowerCase();
+    const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
 
-    if (storedRoleLower === "user" && restrictedPages.some(p => path.startsWith(p))) {
-      navigate("/dashboard/admin");
-      return;
+    if (storedRoleLower === "user") {
+        let pagesToRestrict = restrictedPages;
+        if (canSelfAssign) {
+            const allowedForSelfAssign = [
+                "/dashboard/assign-task",
+                "/dashboard/checklist",
+                "/dashboard/maintenance",
+                "/dashboard/repair",
+                "/dashboard/ea-task",
+                "/dashboard/quick-task"
+            ];
+            pagesToRestrict = pagesToRestrict.filter(p => !allowedForSelfAssign.some(allowed => p.startsWith(allowed)));
+        }
+        if (pagesToRestrict.some(p => path.startsWith(p))) {
+            navigate("/dashboard/admin");
+            return;
+        }
     }
 
     if (storedRoleLower === "hod") {
@@ -128,27 +154,34 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
           fetchReportingUsers();
       }
 
-    // Sync with database to get the latest image
-    const syncProfileImage = async () => {
+    // Sync with database to get the latest image and permissions
+    const syncProfileData = async () => {
       try {
         const { data } = await supabase
           .from("new_users")
-          .select("profile_image")
+          .select("profile_image, can_self_assign")
           .eq("user_name", storedUsername)
           .single();
 
-        if (data && data.profile_image) {
-          setProfileImage(data.profile_image);
-          localStorage.setItem("profile_image", data.profile_image);
-          console.log("✅ Profile image synced from DB:", data.profile_image);
+        if (data) {
+          if (data.profile_image) {
+            setProfileImage(data.profile_image);
+            localStorage.setItem("profile_image", data.profile_image);
+            console.log("✅ Profile image synced from DB:", data.profile_image);
+          }
+          if (data.can_self_assign !== undefined) {
+            const serverCanSelfAssign = data.can_self_assign === true;
+            setCanSelfAssignState(serverCanSelfAssign);
+            localStorage.setItem("can_self_assign", serverCanSelfAssign ? "true" : "false");
+          }
         }
       } catch (err) {
-        console.error("❌ Error syncing profile image:", err);
+        console.error("❌ Error syncing profile data:", err);
       }
     };
 
     if (storedUsername) {
-      syncProfileImage();
+      syncProfileData();
     }
 
     console.log("AdminLayout - Profile Image URL (Cached):", cachedImage);
@@ -272,7 +305,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
     // },
     {
       href: "/dashboard/working-data",
-      label: "Working Data",
+      label: "Daily Time Sheet",
       icon: Database,
       active: location.pathname.includes("/dashboard/working-data"),
       showFor: ["admin", "HOD", "user"],
@@ -324,6 +357,11 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
         if (route.label === "Holiday") {
             return isSuperAdmin || userRoleNormalized === "admin";
         }
+        
+        if (route.label === "Assign Task" && canSelfAssignState) {
+            return true;
+        }
+        
         return route.showFor.some(role => role.toLowerCase() === userRoleNormalized);
       })
       .map(route => {
@@ -359,8 +397,8 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
             to="/dashboard/admin"
             className="flex items-center gap-2 font-semibold text-blue-700"
           >
-            <img src={logo} alt="TaskDesk Logo" className="h-9 w-9 rounded-lg object-contain bg-white p-1 border border-blue-200" />
-            <span>TaskDesk</span>
+            <img src={logo} alt="Checklist & Delegation Logo" className="h-9 w-9 rounded-lg object-contain bg-white p-1 border border-blue-200" />
+            <span>Checklist & Delegation</span>
           </Link>
         </div>
         <nav className="flex-1 overflow-y-auto p-2">
@@ -550,8 +588,8 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
                 className="flex items-center gap-2 font-semibold text-blue-700"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <img src={logo} alt="TaskDesk Logo" className="h-9 w-9 rounded-lg object-contain bg-white p-1 border border-blue-200" />
-                <span>TaskDesk</span>
+                <img src={logo} alt="Checklist & Delegation Logo" className="h-9 w-9 rounded-lg object-contain bg-white p-1 border border-blue-200" />
+                <span>Checklist & Delegation</span>
               </Link>
             </div>
             <nav className="flex-1 overflow-y-auto p-2 bg-white">
@@ -718,13 +756,31 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
           <div className="flex md:hidden w-8"></div>
           <div className="flex flex-col items-center">
             <h1 className="text-lg font-bold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent">
-              TaskDesk
+              Checklist & Delegation
             </h1>
             <p className="text-[10px] text-gray-400 font-medium uppercase tracking-[0.2em] -mt-1 hidden xs:block">
-              TaskDesk
+              Checklist & Delegation
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* WhatsApp Toggle for Super Admin */}
+            {isSuperAdmin && (
+              <button
+                onClick={() => {
+                  const newState = !isWhatsAppEnabled;
+                  localStorage.setItem('whatsapp_enabled', newState);
+                  window.dispatchEvent(new Event('whatsapp_toggled'));
+                }}
+                className={`p-1.5 sm:p-2 rounded-full border ${
+                  isWhatsAppEnabled 
+                    ? 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100' 
+                    : 'border-gray-200 bg-gray-50 text-gray-400 hover:bg-gray-100'
+                } transition-colors hidden sm:flex`}
+                title={isWhatsAppEnabled ? "WhatsApp Service Active" : "WhatsApp Service Paused"}
+              >
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            )}
             <div className="hidden sm:flex flex-col items-end mr-1">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Welcome</span>
               <span className="text-sm font-black text-purple-700 -mt-1">Hello, {username || 'User'}</span>
@@ -800,13 +856,13 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
           )}
 
           <Link
-            to="/dashboard/delegation"
-            className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${location.pathname === "/dashboard/delegation"
+            to="/dashboard/working-data"
+            className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${location.pathname === "/dashboard/working-data"
               ? "text-purple-600 bg-purple-50"
               : "text-gray-400 hover:text-purple-400"
               }`}
           >
-            <BookmarkCheck size={22} strokeWidth={location.pathname === "/dashboard/delegation" ? 2.5 : 2} />
+            <BookmarkCheck size={22} strokeWidth={location.pathname === "/dashboard/working-data" ? 2.5 : 2} />
             <span className="text-[10px] mt-1 font-bold">Status</span>
           </Link>
 

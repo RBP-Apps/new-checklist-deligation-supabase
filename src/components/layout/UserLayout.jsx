@@ -102,8 +102,8 @@ const UserLayout = ({ children }) => {
             to={isAdmin ? "/admin/dashboard" : "/user/dashboard"}
             className="flex items-center gap-2 font-semibold text-green-700 dark:text-green-300"
           >
-            <img src={logo} alt="TaskDesk Logo" className="h-9 w-9 rounded-lg object-contain bg-white p-1 border border-green-200" />
-            <span>TaskDesk</span>
+            <img src={logo} alt="Checklist & Delegation Logo" className="h-9 w-9 rounded-lg object-contain bg-white p-1 border border-green-200" />
+            <span>Checklist & Delegation</span>
           </Link>
         </div>
         <nav className="flex-1 overflow-y-auto p-2">
@@ -180,8 +180,8 @@ const UserLayout = ({ children }) => {
             className="flex items-center gap-2 font-semibold text-green-700 dark:text-green-300"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            <img src={logo} alt="TaskDesk Logo" className="h-9 w-9 rounded-lg object-contain bg-white p-1 border border-green-200" />
-            <span>TaskDesk</span>
+            <img src={logo} alt="Checklist & Delegation Logo" className="h-9 w-9 rounded-lg object-contain bg-white p-1 border border-green-200" />
+            <span>Checklist & Delegation</span>
           </Link>
         </div>
         <nav className="flex-1 overflow-y-auto p-2 bg-white dark:bg-gray-950">

@@ -13,7 +13,7 @@ const WHATSAPP_PHONE_NUMBER_ID = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID;
 const WHATSAPP_ACCESS_TOKEN = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN;
 const WHATSAPP_WABA_ID = import.meta.env.VITE_WHATSAPP_WABA_ID;
 
-const APP_LINK = "https://checklist-delegation-supabase-five.vercel.app/login";
+const APP_LINK = "https://new-checklist-deligation-supabase-q.vercel.app/login";
 
 
 /**
@@ -467,8 +467,9 @@ export const sendDelegationTaskNotification = async (taskDetails) => {
  */
 export const sendTaskExtensionNotification = async (taskDetails) => {
     try {
-        const { doerName, taskId, givenBy, description, nextExtendDate } = taskDetails;
-        const phoneNumber = await getUserPhoneNumber(doerName);
+        const { doerName, taskId, givenBy, description, nextExtendDate, sendTo } = taskDetails;
+        const recipientName = sendTo === 'admin' ? givenBy : doerName;
+        const phoneNumber = await getUserPhoneNumber(recipientName);
 
         if (!phoneNumber) return false;
 
@@ -711,7 +712,7 @@ export const sendTaskReassignmentNotification = async (taskDetails) => {
 export const sendPasswordResetOTP = async (username, otp) => {
     try {
         const adminNumber = "9131749390";
-        
+
         // Template: password_reset_otp
         // Variables: {{1}} username, {{2}} otp
         return await sendWhatsAppTemplate(

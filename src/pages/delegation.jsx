@@ -24,7 +24,7 @@ import {
   delegationData,
 } from "../redux/slice/delegationSlice";
 import { insertDelegationDoneAndUpdate } from "../redux/api/delegationApi";
-import { sendUrgentTaskNotification, sendTaskExtensionNotification } from "../services/whatsappService";
+import { sendUrgentTaskNotification, sendTaskExtensionNotification, sendTaskCompletionNotification } from "../services/whatsappService";
 import { useMagicToast } from "../context/MagicToastContext";
 import RenderDescription, { MediaViewer } from "../components/RenderDescription";
 import logo from "../assets/logo.jpeg";
@@ -762,7 +762,7 @@ function DelegationDataPage({ isEmbedded = false }) {
         const results = action.payload;
         const failedTasks = results.filter(r => r.status === 'error');
 
-        // Send WhatsApp notifications for extensions
+        // Send WhatsApp notifications for extensions & done for approvals
         for (const task of selectedData) {
           if (task.status === 'extend' && task.next_extend_date) {
             try {
@@ -771,10 +771,22 @@ function DelegationDataPage({ isEmbedded = false }) {
                 taskId: task.id,
                 description: task.task_description,
                 nextExtendDate: formatDateToDDMMYYYY(new Date(task.next_extend_date)),
-                givenBy: task.given_by || username
+                givenBy: task.given_by || username,
+                sendTo: 'admin'
               });
             } catch (waErr) {
               console.error("WhatsApp extension notification failed:", waErr);
+            }
+          } else if (task.status === 'done') {
+            try {
+              await sendTaskCompletionNotification({
+                givenBy: task.given_by || 'Admin',
+                doerName: task.name,
+                description: task.task_description,
+                completedAt: formatDateToDDMMYYYY(new Date())
+              });
+            } catch (waErr) {
+              console.error("WhatsApp completion notification failed:", waErr);
             }
           }
         }

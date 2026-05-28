@@ -159,6 +159,13 @@ const AllTasks = () => {
     }
   }, [location.state]);
 
+  // Prevent HOD role from accessing delegation tab
+  useEffect(() => {
+    if (userRole?.toLowerCase() === "hod" && activeTab === "delegation") {
+      setActiveTab("checklist");
+    }
+  }, [userRole, activeTab]);
+
   // Format date to dd/mm/yyyy
   const formatDate = useCallback((dateString) => {
     if (!dateString) return "—";
@@ -1162,13 +1169,17 @@ const AllTasks = () => {
             {/* Tab System & Primary Actions */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
               <div className="flex-shrink-0">
-                <TaskManagementTabs activeTab={activeTab} setActiveTab={(newTab) => {
-                  setActiveTab(newTab);
-                  setShowHistory(false);
-                  setSelectedItems(new Set());
-                  setSearchTerm("");
-                  setDateFilter("all");
-                }} />
+                <TaskManagementTabs 
+                  activeTab={activeTab} 
+                  hideDelegation={userRole?.toLowerCase() === "hod"}
+                  setActiveTab={(newTab) => {
+                    setActiveTab(newTab);
+                    setShowHistory(false);
+                    setSelectedItems(new Set());
+                    setSearchTerm("");
+                    setDateFilter("all");
+                  }} 
+                />
               </div>
 
               <div className="flex flex-wrap items-center gap-2 flex-grow justify-end">

@@ -4,8 +4,8 @@ import { ClipboardCheck, Hammer, Wrench, Activity, Users } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function TaskManagementTabs({ activeTab, setActiveTab, hideDelegation = false }) {
-    const role = (localStorage.getItem("role") || "").toLowerCase();
-    const designation = (localStorage.getItem("designation") || "").toLowerCase();
+    const role = (localStorage.getItem("role") || "").trim().toLowerCase();
+    const designation = (localStorage.getItem("designation") || "").trim().toLowerCase();
     const isMachineOperator = designation.includes("machin") || designation.includes("operat") || designation.includes("oprat");
 
     const allTabs = [

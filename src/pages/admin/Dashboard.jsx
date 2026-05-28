@@ -897,6 +897,20 @@ export default function AdminDashboard() {
     }
   }, [departmentFilter, dashboardType]);
 
+  // Prevent HOD role from accessing restricted tabs/dashboard types
+  useEffect(() => {
+    if (userRole?.toLowerCase() === "hod") {
+      if (dashboardType === "delegation") {
+        setDashboardType("checklist");
+      }
+      const designation = (localStorage.getItem("designation") || "").toLowerCase();
+      const isMachineOperator = designation.includes("machin") || designation.includes("operat") || designation.includes("oprat");
+      if (mainTab === "ea" || mainTab === "maintenance" || (mainTab === "repair" && !isMachineOperator)) {
+        setMainTab("default");
+      }
+    }
+  }, [userRole, dashboardType, mainTab]);
+
   // Add scroll event listener for infinite scroll
   useEffect(() => {
     const handleScroll = () => {
@@ -1176,6 +1190,7 @@ export default function AdminDashboard() {
           <div className="max-w-7xl mx-auto">
             <TaskManagementTabs
               activeTab={mainTab === 'default' ? (dashboardType === 'delegation' ? 'delegation' : 'checklist') : mainTab}
+              hideDelegation={userRole?.toLowerCase() === "hod"}
               setActiveTab={(tabId) => {
                 // Clear current tasks immediately to prevent showing old data on new tab
                 setDepartmentData(prev => ({ ...prev, allTasks: [] }));

@@ -407,7 +407,7 @@ export default function EAView() {
 
     return (
         <div className="space-y-6 pb-10 animate-in fade-in duration-500">
-            {userRole !== 'user' && (
+            {userRole === 'admin' && (
                 <EaStatsRow 
                     title="Department Overview" 
                     subtitle="All tasks across the executive department"

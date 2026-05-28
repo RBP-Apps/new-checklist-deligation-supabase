@@ -30,7 +30,7 @@ export default function DefaultView({
     return (
         <div className="space-y-8">
             {/* Total Tasks Section */}
-            {userRole?.toLowerCase() !== "user" && (
+            {userRole?.toLowerCase() === "admin" && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-200 pb-2">
                         <h2 className="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">Department Overview</h2>

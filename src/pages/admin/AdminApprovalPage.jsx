@@ -597,6 +597,7 @@ export default function AdminApprovalPage() {
                                         </th>
                                     )}
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         {activeTab === "delegation" || activeTab === "ea" || activeTab === "checklist" ? "Task Description" :
                                             activeTab === "maintenance" ? "Task/Machine" : "Issue/Machine"}
@@ -641,6 +642,11 @@ export default function AdminApprovalPage() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-gray-900">{task.doer_name || task.name || task.filled_by}</div>
                                                 <div className="text-[10px] text-gray-500 font-medium uppercase tracking-tight">By: {task.given_by || '-'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
+                                                    {task.task_id || task.original_task_id || task.id}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4">
                                                     <RenderDescription 
@@ -854,6 +860,9 @@ export default function AdminApprovalPage() {
                                             )}
                                             <div className="space-y-1">
                                                 <p className="text-sm font-black text-gray-900">{task.doer_name || task.name || task.filled_by}</p>
+                                                <span className="inline-block mt-0.5 text-[9px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                                                    {task.task_id || task.original_task_id || task.id}
+                                                </span>
                                                 <div className="space-y-1 mt-1">
                                                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider flex items-center gap-1">
                                                         <Clock size={10} /> {viewMode === 'pending' ? 'Submitted' : 'Approved'}: {formatDate(viewMode === 'pending' ? (task.submission_date || task.submission_timestamp || task.created_at) : (task.admin_approval_date || task.updated_at || task.submission_date))}

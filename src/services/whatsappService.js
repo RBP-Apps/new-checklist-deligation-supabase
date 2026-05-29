@@ -93,6 +93,42 @@ const getUserPhoneNumber = async (username) => {
 };
 
 /**
+ * Get the contact number of the task assigner (givenBy) in a readable format.
+ * Returns e.g. "+91 62644 60405" or 'N/A' if not found.
+ */
+const getAssignerContactNumber = async (givenBy) => {
+    try {
+        const cleanName = parseName(givenBy);
+        if (!cleanName) return 'N/A';
+
+        const { data, error } = await supabase
+            .from('new_users')
+            .select('number')
+            .ilike('user_name', cleanName.trim())
+            .limit(1);
+
+        if (error || !data || data.length === 0) return 'N/A';
+
+        const rawPhone = data[0]?.number;
+        if (!rawPhone) return 'N/A';
+
+        // Normalize to digits only
+        let digits = String(rawPhone).replace(/\D/g, '');
+        if (!digits.startsWith('91') && digits.length === 10) {
+            digits = '91' + digits;
+        }
+        // Format: +91 XXXXX XXXXX
+        if (digits.startsWith('91') && digits.length === 12) {
+            return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+        }
+        return `+${digits}`;
+    } catch (error) {
+        console.error('Error fetching assigner contact number:', error);
+        return 'N/A';
+    }
+};
+
+/**
  * Send WhatsApp message using Meta API
  * @param {string} phoneNumber - Recipient phone number
  * @param {string} message - Message text
@@ -304,17 +340,20 @@ export const sendUrgentTaskNotification = async (taskDetails) => {
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
+        const contactNo = await getAssignerContactNumber(givenBy);
+
         const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
         const match = description && description.match(urlRegex);
         const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
         const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
 
         // Template: task_assignment_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} allocatedBy (givenBy), {{4}} description, {{5}} deadline
+        // Variables: {{1}} doerName, {{2}} taskId, {{3}} givenBy, {{4}} description, {{5}} deadline, {{6}} contactNo
+        // (link is hardcoded in Meta template body)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
             'task_assignment_notification',
-            [doerName, taskId, givenBy, displayDescription, dueDate],
+            [doerName, taskId, givenBy, displayDescription, dueDate, contactNo],
             'en_US'
         );
 
@@ -338,19 +377,22 @@ export const sendChecklistTaskNotification = async (taskDetails) => {
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
+        const contactNo = await getAssignerContactNumber(givenBy);
+
         const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
         const match = description && description.match(urlRegex);
         const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
         const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
 
-        const descriptionText = `${displayDescription || ''}\nDepartment: ${department || 'N/A'}\nDuration: ${duration || 'N/A'}`.trim();
+        const descriptionText = `${displayDescription || ''}${department ? ` | Dept: ${department}` : ''}${duration ? ` | Duration: ${duration}` : ''}`.trim();
 
         // Template: task_assignment_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} allocatedBy (givenBy), {{4}} description, {{5}} deadline
+        // Variables: {{1}} doerName, {{2}} taskId, {{3}} givenBy, {{4}} description, {{5}} deadline, {{6}} contactNo
+        // (link is hardcoded in Meta template body)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
             'task_assignment_notification',
-            [doerName, taskId, givenBy, descriptionText, startDate],
+            [doerName, taskId, givenBy, descriptionText, startDate, contactNo],
             'en_US'
         );
 
@@ -374,19 +416,22 @@ export const sendMaintenanceTaskNotification = async (taskDetails) => {
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
+        const contactNo = await getAssignerContactNumber(givenBy);
+
         const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
         const match = description && description.match(urlRegex);
         const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
         const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
 
-        const descriptionText = `${displayDescription || ''}\nMachine: ${machineName || 'N/A'}\nPart: ${partName || 'N/A'}\nDepartment: ${department || 'N/A'}\nDuration: ${duration || 'N/A'}`.trim();
+        const descriptionText = `${displayDescription || ''}${machineName ? ` | Machine: ${machineName}` : ''}${partName ? ` | Part: ${partName}` : ''}${department ? ` | Dept: ${department}` : ''}${duration ? ` | Duration: ${duration}` : ''}`.trim();
 
         // Template: task_assignment_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} allocatedBy (givenBy), {{4}} description, {{5}} deadline
+        // Variables: {{1}} doerName, {{2}} taskId, {{3}} givenBy, {{4}} description, {{5}} deadline, {{6}} contactNo
+        // (link is hardcoded in Meta template body)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
             'task_assignment_notification',
-            [doerName, taskId, givenBy, descriptionText, startDate],
+            [doerName, taskId, givenBy, descriptionText, startDate, contactNo],
             'en_US'
         );
 
@@ -410,19 +455,22 @@ export const sendRepairTaskNotification = async (taskDetails) => {
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
+        const contactNo = await getAssignerContactNumber(givenBy);
+
         const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
         const match = description && description.match(urlRegex);
         const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
         const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
 
-        const descriptionText = `${displayDescription || ''}\nMachine: ${machineName || 'N/A'}\nDepartment: ${department || 'N/A'}\nDuration: ${duration || 'N/A'}`.trim();
+        const descriptionText = `${displayDescription || ''}${machineName ? ` | Machine: ${machineName}` : ''}${department ? ` | Dept: ${department}` : ''}${duration ? ` | Duration: ${duration}` : ''}`.trim();
 
         // Template: task_assignment_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} allocatedBy (givenBy), {{4}} description, {{5}} deadline
+        // Variables: {{1}} doerName, {{2}} taskId, {{3}} givenBy, {{4}} description, {{5}} deadline, {{6}} contactNo
+        // (link is hardcoded in Meta template body)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
             'task_assignment_notification',
-            [doerName, taskId, givenBy, descriptionText, startDate],
+            [doerName, taskId, givenBy, descriptionText, startDate, contactNo],
             'en_US'
         );
 
@@ -446,17 +494,19 @@ export const sendEATaskNotification = async (taskDetails) => {
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
+        const contactNo = await getAssignerContactNumber(givenBy);
+
         const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
         const match = description && description.match(urlRegex);
         const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
         const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
 
         // Template: ea_task_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} startDate, {{5}} duration, {{6}} givenBy, {{7}} link
+        // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} plannedDate, {{5}} duration, {{6}} givenBy, {{7}} contactNo, {{8}} link
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
             'ea_task_notification',
-            [doerName, taskId, displayDescription, startDate, duration || 'N/A', givenBy, APP_LINK],
+            [doerName, taskId, displayDescription, startDate, duration || 'N/A', givenBy, contactNo, APP_LINK],
             'en'
         );
 
@@ -480,17 +530,19 @@ export const sendDelegationTaskNotification = async (taskDetails) => {
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
+        const contactNo = await getAssignerContactNumber(givenBy);
+
         const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
         const match = description && description.match(urlRegex);
         const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
         const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
 
         // Template: new_task_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} department, {{4}} description, {{5}} startDate, {{6}} givenBy, {{7}} link
+        // Variables: {{1}} doerName, {{2}} taskId, {{3}} department, {{4}} description, {{5}} startDate, {{6}} givenBy, {{7}} contactNo, {{8}} link
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
             'new_task_notification',
-            [doerName, taskId, department || 'N/A', displayDescription, startDate, givenBy, APP_LINK],
+            [doerName, taskId, department || 'N/A', displayDescription, startDate, givenBy, contactNo, APP_LINK],
             'en'
         );
 
@@ -527,11 +579,12 @@ export const sendTaskExtensionNotification = async (taskDetails) => {
             : description;
 
         // Template: task_extend_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} nextExtendDate, {{5}} givenBy, {{6}} link
+        // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} nextExtendDate, {{5}} givenBy, {{6}} contactNo, {{7}} link
+        const contactNo = await getAssignerContactNumber(givenBy);
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
             'task_extend_notification',
-            [doerName, taskId, displayDescription, nextExtendDate, givenBy, APP_LINK],
+            [doerName, taskId, displayDescription, nextExtendDate, givenBy, contactNo, APP_LINK],
             'en'
         );
 
@@ -588,11 +641,12 @@ export const sendTaskAssignmentNotification = async (taskDetails) => {
                 const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note Link: ${audioUrl}` : description;
 
                 // Using new_task_notification template instead of raw text
-                // Variables: {{1}} doerName, {{2}} taskId, {{3}} department, {{4}} description, {{5}} startDate, {{6}} givenBy, {{7}} link
+                // Variables: {{1}} doerName, {{2}} taskId, {{3}} department, {{4}} description, {{5}} startDate, {{6}} givenBy, {{7}} contactNo, {{8}} link
+                const contactNo = await getAssignerContactNumber(givenBy);
                 const sent = await sendWhatsAppTemplate(
                     phoneNumber,
                     'new_task_notification',
-                    [doerName, taskId, 'N/A', displayDescription, startDate, givenBy, APP_LINK],
+                    [doerName, taskId, 'N/A', displayDescription, startDate, givenBy, contactNo, APP_LINK],
                     'en'
                 );
 
@@ -782,11 +836,12 @@ export const sendAdminExtensionRemarkNotification = async (taskDetails) => {
         const descriptionText = `${description || 'N/A'}\nAdmin Remark: ${remark || 'No remark provided'}`;
 
         // Template: task_extend_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} nextExtendDate, {{5}} givenBy, {{6}} link
+        // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} nextExtendDate, {{5}} givenBy, {{6}} contactNo, {{7}} link
+        const adminContactNo = await getAssignerContactNumber('Admin');
         return await sendWhatsAppTemplate(
             phoneNumber,
             'task_extend_notification',
-            [doerName, taskId, descriptionText, 'N/A', 'Admin', APP_LINK],
+            [doerName, taskId, descriptionText, 'N/A', 'Admin', adminContactNo, APP_LINK],
             'en'
         );
     } catch (error) {

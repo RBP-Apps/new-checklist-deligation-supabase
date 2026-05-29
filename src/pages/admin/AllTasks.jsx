@@ -447,24 +447,39 @@ const AllTasks = () => {
       const currentUserRole = (userRole || "").toLowerCase();
       const isSuperAdmin = currentUsername.toLowerCase() === "admin";
       
+      const givenByField = activeTab === "repair" ? "filled_by" : "given_by";
+      const u = currentUsername.trim();
+
       if (taskScope === "my_tasks") {
-        query = query.eq(nameField, currentUsername);
+        // Show tasks where user is the doer
+        query = query.or(`${nameField}.ilike.${u},${nameField}.ilike.%"${u}"%`);
       } else if (taskScope === "assigned_by_me") {
-        const givenByField = activeTab === "repair" ? "filled_by" : "given_by";
-        query = query.eq(givenByField, currentUsername);
+        // Show tasks where user is the creator/assigner
+        query = query.or(`${givenByField}.ilike.${u},${givenByField}.ilike.%"${u}"%`);
       } else if (!isSuperAdmin) {
-        let reportingUsers = [currentUsername];
-        if (currentUserRole === "admin" || currentUserRole === "hod") {
+        // Overview: show tasks where user is doer OR creator
+        if (currentUserRole === "user") {
+          // USER role: show tasks assigned TO me OR assigned BY me
+          query = query.or(
+            `${nameField}.ilike.${u},${nameField}.ilike.%"${u}"%,${givenByField}.ilike.${u},${givenByField}.ilike.%"${u}"%`
+          );
+        } else if (currentUserRole === "admin" || currentUserRole === "hod") {
+          // HOD/admin: show all reporting users' tasks + tasks assigned by this HOD
           const { data: reports } = await supabase
             .from("new_users")
             .select("user_name")
             .eq("reported_by", username);
-          if (reports && reports.length > 0) {
-            reportingUsers = [currentUsername, ...reports.map((r) => (r.user_name || ""))];
-          }
+          const reportingUsers = [currentUsername, ...((reports || []).map((r) => r.user_name || ""))];
+          const nameConds = reportingUsers
+            .map(user => {
+              const ru = user.trim();
+              return `${nameField}.ilike.${ru},${nameField}.ilike.%"${ru}"%`;
+            })
+            .join(',');
+          query = query.or(`${nameConds},${givenByField}.ilike.${u},${givenByField}.ilike.%"${u}"%`);
         }
-        query = query.in(nameField, reportingUsers);
       }
+
 
       if (showHistory) {
         if (activeTab === "repair") {

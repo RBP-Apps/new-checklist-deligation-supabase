@@ -32,6 +32,29 @@ import RepairView from "./dashboard/views/RepairView.jsx"
 import EAView from "./dashboard/views/EAView.jsx"
 import TaskManagementTabs from "../../components/TaskManagementTabs.jsx"
 
+// Helper to parse JSON string names or objects
+const parseName = (val) => {
+    if (!val) return '';
+    if (typeof val === 'object') {
+        const name = val.given_by || val.name || val.user_name || '';
+        return typeof name === 'string' ? name.trim() : String(name).trim();
+    }
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (trimmed.startsWith('{')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                const name = parsed.given_by || parsed.name || parsed.user_name || trimmed;
+                return typeof name === 'string' ? name.trim() : String(name).trim();
+            } catch (e) {
+                return trimmed;
+            }
+        }
+        return trimmed;
+    }
+    return String(val).trim();
+};
+
 export default function AdminDashboard() {
   const [dashboardType, setDashboardType] = useState("checklist")
   const [taskView, setTaskView] = useState("recent")
@@ -611,19 +634,19 @@ export default function AdminDashboard() {
       if (mainTab === 'maintenance' || mainTab === 'repair' ||
         departmentFilter === 'Maintenance' || departmentFilter === 'Repair') {
         // For maintenance/repair tabs, extract from task data (no users table link)
-        uniqueStaff = [...new Set(data.map((task) => task.name).filter((name) => name && name.trim() !== ""))];
+        uniqueStaff = [...new Set(data.map((task) => parseName(task.name || task.assigned_person || task.doer_name)).filter((name) => name && name.trim() !== ""))];
       } else {
         // For checklist/delegation: always fetch from users table (department-aware)
         // This shows ALL users in the selected department, not just those with tasks in the current batch
         try {
           uniqueStaff = await getStaffNamesByDepartmentApi(departmentFilter !== 'all' ? departmentFilter : null);
           // Cross-filter: only show staff who actually have tasks assigned (in the full task table)
-          const staffWithTasks = new Set(data.map((task) => (task.name || '').trim().toLowerCase()));
+          const staffWithTasks = new Set(data.map((task) => parseName(task.name || task.assigned_person || task.doer_name).trim().toLowerCase()));
           uniqueStaff = uniqueStaff.filter(name => staffWithTasks.has((name || '').trim().toLowerCase()));
         } catch (error) {
           console.error('Error fetching staff from users table:', error);
           // Fallback: extract from loaded task data
-          uniqueStaff = [...new Set(data.map((task) => task.name).filter((name) => name && name.trim() !== ""))];
+          uniqueStaff = [...new Set(data.map((task) => parseName(task.name || task.assigned_person || task.doer_name)).filter((name) => name && name.trim() !== ""))];
         }
       }
 
@@ -639,7 +662,10 @@ export default function AdminDashboard() {
       // SECOND: Apply dashboard staff filter ONLY if not "all"
       if (dashboardStaffFilter !== "all") {
         filteredData = filteredData.filter(
-          (task) => task.name && task.name.toLowerCase() === dashboardStaffFilter.toLowerCase(),
+          (task) => {
+            const parsedName = parseName(task.name || task.assigned_person || task.doer_name);
+            return parsedName && parsedName.toLowerCase() === dashboardStaffFilter.toLowerCase();
+          }
         )
       }
 
@@ -662,8 +688,8 @@ export default function AdminDashboard() {
           // Skip if not involved (assigned to OR created by) for non-admin
           const currentUserName = (username || "").toLowerCase();
           const roleNormalized = (userRole || "").toLowerCase();
-          const assignedUser = (task.name || task.assigned_person || task.doer_name || "").toLowerCase();
-          const createdByUser = (task.given_by || task.filled_by || "").toLowerCase();
+          const assignedUser = parseName(task.name || task.assigned_person || task.doer_name).toLowerCase();
+          const createdByUser = parseName(task.given_by || task.filled_by).toLowerCase();
 
           if (roleNormalized !== "admin") {
             if (roleNormalized === 'hod') {
@@ -761,7 +787,7 @@ export default function AdminDashboard() {
             id: task.id,
             title: task.task_description || task.issue_description || "No Description",
             task_description: task.task_description || task.issue_description,
-            assignedTo: task.name || task.assigned_person || task.doer_name || "Unassigned",
+            assignedTo: parseName(task.name || task.assigned_person || task.doer_name) || "Unassigned",
             taskStartDate: formatDateToDDMMYYYY(taskStartDate || (task.planned_date ? new Date(task.planned_date) : (task.task_start_date ? new Date(task.task_start_date) : (task.created_at ? new Date(task.created_at) : null)))),
             originalTaskStartDate: task.planned_date || task.task_start_date || task.created_at,
             submission_date: task.submission_date,
@@ -772,7 +798,7 @@ export default function AdminDashboard() {
             part_name: task.part_name || "-",
             part_area: task.part_area || "-",
             department: task.department || "-",
-            given_by: task.given_by || task.filled_by || "-",
+            given_by: parseName(task.given_by || task.filled_by) || "-",
             enable_reminders: task.enable_reminders || task.enable_reminder || false,
             require_attachment: task.require_attachment || false,
             remarks: task.remarks || task.remark || "-",
@@ -1152,8 +1178,9 @@ export default function AdminDashboard() {
     const filteredTasks = departmentData.allTasks.filter((task) => {
       const taskDate = parseTaskStartDate(task.originalTaskStartDate)
       const assignedUser = (task.assignedTo || "").toLowerCase()
-      // Only count tasks up to today for consistency with other stats
-      return taskDate && taskDate <= today && assignedUser === currentUserName
+      // Only count tasks up to today for consistency with other stats, unless a date filter is active
+      const isDateValid = dateRange.filtered || (taskDate && taskDate <= today)
+      return taskDate && isDateValid && assignedUser === currentUserName
     })
 
     const totalTasks = filteredTasks.length
@@ -1168,8 +1195,10 @@ export default function AdminDashboard() {
     // Filter tasks assigned by current user
     const filteredTasks = departmentData.allTasks.filter((task) => {
       const taskDate = parseTaskStartDate(task.originalTaskStartDate)
-      const createdByUser = (task.given_by || task.filled_by || "").toLowerCase()
-      return taskDate && taskDate <= today && createdByUser === currentUserName
+      const createdByUser = (task.given_by || "").toLowerCase()
+      // Only count tasks up to today for consistency with other stats, unless a date filter is active
+      const isDateValid = dateRange.filtered || (taskDate && taskDate <= today)
+      return taskDate && isDateValid && createdByUser === currentUserName
     })
 
     const totalTasks = filteredTasks.length

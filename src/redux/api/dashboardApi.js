@@ -47,16 +47,22 @@ export const fetchDashboardDataApi = async (
       .order(dateColumn, { ascending: isAscending })
       .range(from, to);
  
-    // Apply role-based filtering first
+    // Apply role-based filtering first (match doer=name OR creator=given_by)
     if (role === 'USER' && username) {
-      query = query.eq('name', username);
+      const u = username.trim();
+      query = query.or(`name.ilike.${u},name.ilike.%"${u}"%,given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (role === 'HOD' && username) {
       const { data: reports } = await supabase
         .from("new_users")
         .select("user_name")
         .eq("reported_by", username);
       const reportingUsers = [username, ...(reports?.map(r => r.user_name) || [])];
-      query = query.in('name', reportingUsers);
+      const nameConds = reportingUsers.map(user => {
+        const u = user.trim();
+        return `name.ilike.${u},name.ilike.%"${u}"%`;
+      }).join(',');
+      const u = username.trim();
+      query = query.or(`${nameConds},given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     }
 
     // Apply department filter if provided (for checklist and delegation)
@@ -64,11 +70,9 @@ export const fetchDashboardDataApi = async (
       query = query.eq('department', departmentFilter);
     }
 
-
-
     // Apply staff filter if provided and not "all" (for admin/HOD users)
     if (staffFilter && staffFilter !== 'all' && (role === 'ADMIN' || role === 'HOD')) {
-      query = query.eq('name', staffFilter);
+      query = query.or(`name.ilike.${staffFilter.trim()},name.ilike.%"${staffFilter.trim()}"%`);
     }
 
     // Apply task view filtering on server side
@@ -164,21 +168,27 @@ export const getDashboardDataCount = async (dashboardType, staffFilter = null, t
       .from(resolveTable(dashboardType))
       .select('*', { count: 'exact', head: true });
  
-    // Apply role-based filtering
+    // Apply role-based filtering (match doer=name OR creator=given_by)
     if (role === 'USER' && username) {
-      query = query.eq('name', username);
+      const u = username.trim();
+      query = query.or(`name.ilike.${u},name.ilike.%"${u}"%,given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (role === 'HOD' && username) {
       const { data: reports } = await supabase
         .from("new_users")
         .select("user_name")
         .eq("reported_by", username);
       const reportingUsers = [username, ...(reports?.map(r => r.user_name) || [])];
-      query = query.in('name', reportingUsers);
+      const nameConds = reportingUsers.map(user => {
+        const u = user.trim();
+        return `name.ilike.${u},name.ilike.%"${u}"%`;
+      }).join(',');
+      const u = username.trim();
+      query = query.or(`${nameConds},given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     }
 
     // Apply staff filter
     if (staffFilter && staffFilter !== 'all' && (role === 'ADMIN' || role === 'HOD')) {
-      query = query.eq('name', staffFilter);
+      query = query.or(`name.ilike.${staffFilter.trim()},name.ilike.%"${staffFilter.trim()}"%`);
     }
 
     // Apply department filter (for checklist and delegation)
@@ -267,18 +277,24 @@ export const countPendingOrDelayTaskApi = async (dashboardType, staffFilter = nu
         .lte(dateColumn, `${today}T23:59:59`);
     }
  
-    // Apply filters
-    if (role === 'user' && username) {
-      query = query.eq('name', username);
+    // Apply filters (match doer=name OR creator=given_by)
+    if (role?.toLowerCase() === 'user' && username) {
+      const u = username.trim();
+      query = query.or(`name.ilike.${u},name.ilike.%"${u}"%,given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (role === 'HOD' && username) {
       const { data: reports } = await supabase
         .from("new_users")
         .select("user_name")
         .eq("reported_by", username);
       const reportingUsers = [username, ...(reports?.map(r => r.user_name) || [])];
-      query = query.in('name', reportingUsers);
+      const nameConds = reportingUsers.map(user => {
+        const u = user.trim();
+        return `name.ilike.${u},name.ilike.%"${u}"%`;
+      }).join(',');
+      const u = username.trim();
+      query = query.or(`${nameConds},given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (staffFilter && staffFilter !== 'all') {
-      query = query.eq('name', staffFilter);
+      query = query.or(`name.ilike.${staffFilter.trim()},name.ilike.%"${staffFilter.trim()}"%`);
     }
 
     // Apply department filter (only for checklist)
@@ -367,21 +383,27 @@ export const fetchStaffTasksDataApi = async (dashboardType, staffFilter = null, 
       .lte(dateColumn, `${endDate}T23:59:59`)
       .not('name', 'is', null);
  
-    // Apply role-based filtering
+    // Apply role-based filtering (match doer=name OR creator=given_by)
     if (role === 'USER' && username) {
-      query = query.eq('name', username);
+      const u = username.trim();
+      query = query.or(`name.ilike.${u},name.ilike.%"${u}"%,given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (role === 'HOD' && username) {
       const { data: reports } = await supabase
         .from("new_users")
         .select("user_name")
         .eq("reported_by", username);
       const reportingUsers = [username, ...(reports?.map(r => r.user_name) || [])];
-      query = query.in('name', reportingUsers);
+      const nameConds = reportingUsers.map(user => {
+        const u = user.trim();
+        return `name.ilike.${u},name.ilike.%"${u}"%`;
+      }).join(',');
+      const u = username.trim();
+      query = query.or(`${nameConds},given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     }
 
     // Apply staff filter if provided
     if (staffFilter && staffFilter !== 'all' && (role === 'ADMIN' || role === 'HOD')) {
-      query = query.eq('name', staffFilter);
+      query = query.or(`name.ilike.${staffFilter.trim()},name.ilike.%"${staffFilter.trim()}"%`);
     }
 
     // Apply department filter if provided
@@ -535,21 +557,27 @@ export const getStaffTasksCountApi = async (dashboardType, staffFilter = null, d
       .lte(dateColumn, `${endDate}T23:59:59`)
       .not('name', 'is', null);
  
-    // Apply role-based filtering
+    // Apply role-based filtering (match doer=name OR creator=given_by)
     if (role === 'USER' && username) {
-      query = query.eq('name', username);
+      const u = username.trim();
+      query = query.or(`name.ilike.${u},name.ilike.%"${u}"%,given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (role === 'HOD' && username) {
       const { data: reports } = await supabase
         .from("new_users")
         .select("user_name")
         .eq("reported_by", username);
       const reportingUsers = [username, ...(reports?.map(r => r.user_name) || [])];
-      query = query.in('name', reportingUsers);
+      const nameConds = reportingUsers.map(user => {
+        const u = user.trim();
+        return `name.ilike.${u},name.ilike.%"${u}"%`;
+      }).join(',');
+      const u = username.trim();
+      query = query.or(`${nameConds},given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     }
 
     // Apply staff filter
     if (staffFilter && staffFilter !== 'all' && (role === 'ADMIN' || role === 'HOD')) {
-      query = query.eq('name', staffFilter);
+      query = query.or(`name.ilike.${staffFilter.trim()},name.ilike.%"${staffFilter.trim()}"%`);
     }
 
     // Apply department filter
@@ -1131,16 +1159,22 @@ export const countTotalTaskApi = async (dashboardType, staffFilter = null, depar
       .gte(dateColumn, start)
       .lte(dateColumn, end);
  
-    // Apply filters
+    // Apply filters (match doer=name OR creator=given_by)
     if (role === 'user' && username) {
-      query = query.eq('name', username);
+      const u = username.trim();
+      query = query.or(`name.ilike.${u},name.ilike.%"${u}"%,given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (role === 'HOD' && username) {
       const { data: reports } = await supabase
         .from("new_users")
         .select("user_name")
         .eq("reported_by", username);
       const reportingUsers = [username, ...(reports?.map(r => r.user_name) || [])];
-      query = query.in('name', reportingUsers);
+      const nameConds = reportingUsers.map(user => {
+        const u = user.trim();
+        return `name.ilike.${u},name.ilike.%"${u}"%`;
+      }).join(',');
+      const u = username.trim();
+      query = query.or(`${nameConds},given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (staffFilter && staffFilter !== 'all') {
       query = query.eq('name', staffFilter);
     }
@@ -1192,16 +1226,22 @@ export const countCompleteTaskApi = async (dashboardType, staffFilter = null, de
         .lte(dateColumn, end);
     }
  
-    // Apply filters
+    // Apply filters (match doer=name OR creator=given_by)
     if (role === 'user' && username) {
-      query = query.eq('name', username);
+      const u = username.trim();
+      query = query.or(`name.ilike.${u},name.ilike.%"${u}"%,given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (role === 'HOD' && username) {
       const { data: reports } = await supabase
         .from("new_users")
         .select("user_name")
         .eq("reported_by", username);
       const reportingUsers = [username, ...(reports?.map(r => r.user_name) || [])];
-      query = query.in('name', reportingUsers);
+      const nameConds = reportingUsers.map(user => {
+        const u = user.trim();
+        return `name.ilike.${u},name.ilike.%"${u}"%`;
+      }).join(',');
+      const u = username.trim();
+      query = query.or(`${nameConds},given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (staffFilter && staffFilter !== 'all') {
       query = query.eq('name', staffFilter);
     }
@@ -1256,16 +1296,22 @@ export const countOverDueORExtendedTaskApi = async (dashboardType, staffFilter =
         .gte(dateColumn, start);
     }
  
-    // Apply filters
+    // Apply filters (match doer=name OR creator=given_by)
     if (role === 'user' && username) {
-      query = query.eq('name', username);
+      const u = username.trim();
+      query = query.or(`name.ilike.${u},name.ilike.%"${u}"%,given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (role === 'HOD' && username) {
       const { data: reports } = await supabase
         .from("new_users")
         .select("user_name")
         .eq("reported_by", username);
       const reportingUsers = [username, ...(reports?.map(r => r.user_name) || [])];
-      query = query.in('name', reportingUsers);
+      const nameConds = reportingUsers.map(user => {
+        const u = user.trim();
+        return `name.ilike.${u},name.ilike.%"${u}"%`;
+      }).join(',');
+      const u = username.trim();
+      query = query.or(`${nameConds},given_by.ilike.${u},given_by.ilike.%"${u}"%`);
     } else if (staffFilter && staffFilter !== 'all') {
       query = query.eq('name', staffFilter);
     }

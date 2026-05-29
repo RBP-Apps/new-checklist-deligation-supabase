@@ -1,18 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { ClipboardList, Wrench, Hammer, Plus, ArrowUpRight, LayoutGrid, Users } from "lucide-react";
 
 export default function AssignTask() {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const role = (localStorage.getItem("role") || "").toLowerCase();
-    const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
-    if (role === "user" && !canSelfAssign) {
-      navigate("/dashboard/admin");
-    }
-  }, [navigate]);
 
   const role = (localStorage.getItem("role") || "").toLowerCase();
   const designation = (localStorage.getItem("designation") || "").toLowerCase();

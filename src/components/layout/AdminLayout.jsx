@@ -76,35 +76,15 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
 
     // Centralized Security Guard for User Role
     const path = location.pathname;
-    const restrictedPages = [
-      "/dashboard/assign-task",
-      "/dashboard/admin-approval",
-      "/dashboard/checklist",
-      "/dashboard/maintenance",
-      "/dashboard/repair",
-      "/dashboard/ea-task",
-      "/dashboard/quick-task",
-      "/dashboard/holiday-list",
-      "/dashboard/working-day-calendar",
-      "/dashboard/setting"
-    ];
-
     const storedRoleLower = (storedRole || "user").toLowerCase();
-    const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
 
     if (storedRoleLower === "user") {
-        let pagesToRestrict = restrictedPages;
-        if (canSelfAssign) {
-            const allowedForSelfAssign = [
-                "/dashboard/assign-task",
-                "/dashboard/checklist",
-                "/dashboard/maintenance",
-                "/dashboard/repair",
-                "/dashboard/ea-task",
-                "/dashboard/quick-task"
-            ];
-            pagesToRestrict = pagesToRestrict.filter(p => !allowedForSelfAssign.some(allowed => p.startsWith(allowed)));
-        }
+        const pagesToRestrict = [
+            "/dashboard/admin-approval",
+            "/dashboard/holiday-list",
+            "/dashboard/working-day-calendar",
+            "/dashboard/setting"
+        ];
         if (pagesToRestrict.some(p => path.startsWith(p))) {
             navigate("/dashboard/admin");
             return;
@@ -249,7 +229,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
       label: "Assign Task",
       icon: CheckSquare,
       active: location.pathname === "/dashboard/assign-task",
-      showFor: ["admin", "HOD"],
+      showFor: ["admin", "HOD", "user"],
     },
     {
       href: "/dashboard/task",
@@ -358,10 +338,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
             return isSuperAdmin || userRoleNormalized === "admin";
         }
         
-        if (route.label === "Assign Task" && canSelfAssignState) {
-            return true;
-        }
-        
+
         return route.showFor.some(role => role.toLowerCase() === userRoleNormalized);
       })
       .map(route => {

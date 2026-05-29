@@ -35,6 +35,29 @@ const formatPhoneNumber = (phone) => {
     return cleaned;
 };
 
+// Helper to parse JSON string names or objects
+const parseName = (val) => {
+    if (!val) return '';
+    if (typeof val === 'object') {
+        const name = val.given_by || val.name || val.user_name || '';
+        return typeof name === 'string' ? name.trim() : String(name).trim();
+    }
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (trimmed.startsWith('{')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                const name = parsed.given_by || parsed.name || parsed.user_name || trimmed;
+                return typeof name === 'string' ? name.trim() : String(name).trim();
+            } catch (e) {
+                return trimmed;
+            }
+        }
+        return trimmed;
+    }
+    return String(val).trim();
+};
+
 /**
  * Get user phone number from database
  * @param {string} username - Username to fetch phone for
@@ -42,11 +65,14 @@ const formatPhoneNumber = (phone) => {
  */
 const getUserPhoneNumber = async (username) => {
     try {
-        console.log(`🔍 Fetching phone for user: "${username}"`);
+        const cleanUsername = parseName(username);
+        if (!cleanUsername) return null;
+
+        console.log(`🔍 Fetching phone for user: "${cleanUsername}"`);
         const { data, error } = await supabase
             .from('new_users')
             .select('number')
-            .eq('user_name', username)
+            .ilike('user_name', cleanUsername.trim())
             .limit(1);
 
         if (error) {
@@ -55,7 +81,7 @@ const getUserPhoneNumber = async (username) => {
         }
 
         if (!data || data.length === 0) {
-            console.warn(`⚠️ User "${username}" not found in database.`);
+            console.warn(`⚠️ User "${cleanUsername}" not found in database.`);
             return null;
         }
 
@@ -121,6 +147,23 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
 };
 
 /**
+ * Clean template parameter to comply with Meta API guidelines:
+ * - No newlines or tab characters
+ * - No more than 4 consecutive spaces
+ */
+const cleanTemplateParam = (val) => {
+    if (val === null || val === undefined) return 'N/A';
+    let str = String(val);
+    // Replace newlines and carriage returns with a space-separated pipe
+    str = str.replace(/[\r\n]+/g, ' | ');
+    // Replace tabs with a single space
+    str = str.replace(/\t+/g, ' ');
+    // Replace 5 or more consecutive spaces with 4 spaces
+    str = str.replace(/ {5,}/g, '    ');
+    return str.trim();
+};
+
+/**
  * Send WhatsApp message using Meta Template API
  * @param {string} phoneNumber - Recipient phone number
  * @param {string} templateName - Name of the template
@@ -158,7 +201,7 @@ const sendWhatsAppTemplate = async (phoneNumber, templateName, parameters = [], 
                         type: "body",
                         parameters: parameters.map(val => ({
                             type: "text",
-                            text: String(val || 'N/A')
+                            text: cleanTemplateParam(val)
                         }))
                     }
                 ]

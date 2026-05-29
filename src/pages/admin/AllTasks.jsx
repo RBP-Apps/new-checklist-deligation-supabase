@@ -30,7 +30,7 @@ import {
 import TaskManagementTabs from "../../components/TaskManagementTabs";
 import { customDropdownDetails } from "../../redux/slice/settingSlice";
 import { updateRepairData } from "../../redux/api/repairApi";
-import { sendTaskExtensionNotification, sendUrgentTaskNotification } from "../../services/whatsappService";
+import { sendTaskExtensionNotification, sendUrgentTaskNotification, sendTaskCompletionNotification } from "../../services/whatsappService";
 import AudioPlayer from "../../components/AudioPlayer";
 import { useMagicToast } from "../../context/MagicToastContext";
 import RenderDescription from "../../components/RenderDescription";
@@ -985,7 +985,8 @@ const AllTasks = () => {
                 nextExtendDate: new Date(extendedDate).toLocaleString('en-IN', {
                   dateStyle: 'medium',
                   timeStyle: 'short'
-                })
+                }),
+                sendTo: 'admin'
               });
             }
           } else if (isDoneStatus) {
@@ -1052,7 +1053,8 @@ const AllTasks = () => {
                 taskId: id,
                 givenBy: task?.given_by || localStorage.getItem("user-name") || "Admin",
                 description: task?.task_description,
-                nextExtendDate: displayDate
+                nextExtendDate: displayDate,
+                sendTo: 'admin'
               });
             }
           } else if (isDoneStatus) {
@@ -1081,6 +1083,26 @@ const AllTasks = () => {
             }
             const { error: updateError } = await supabase.from("new_delegation").update(updates).eq("task_id", id);
             if (updateError) throw updateError;
+
+            // Send completion notification to the given_by user
+            if (task) {
+              try {
+                const formatDateToDDMMYYYY = (date) => {
+                  const day = String(date.getDate()).padStart(2, '0');
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const year = date.getFullYear();
+                  return `${day}/${month}/${year}`;
+                };
+                await sendTaskCompletionNotification({
+                  givenBy: task.given_by || 'Admin',
+                  doerName: task.name || task.assigned_person || task.doer_name,
+                  description: task.task_description,
+                  completedAt: formatDateToDDMMYYYY(new Date())
+                });
+              } catch (waErr) {
+                console.error("WhatsApp completion notification failed:", waErr);
+              }
+            }
           }
         } else {
           // Original logic for other task types

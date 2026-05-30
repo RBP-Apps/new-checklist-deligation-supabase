@@ -347,12 +347,12 @@ export const sendUrgentTaskNotification = async (taskDetails) => {
         const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
         const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
 
-        // Template: task_assignment_notification
+        // Template: task_assignment_notification_v2
         // Variables: {{1}} doerName, {{2}} taskId, {{3}} givenBy, {{4}} description, {{5}} deadline, {{6}} contactNo
         // (link is hardcoded in Meta template body)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
-            'task_assignment_notification',
+            'task_assignment_notification_v2',
             [doerName, taskId, givenBy, displayDescription, dueDate, contactNo],
             'en_US'
         );
@@ -386,12 +386,12 @@ export const sendChecklistTaskNotification = async (taskDetails) => {
 
         const descriptionText = `${displayDescription || ''}${department ? ` | Dept: ${department}` : ''}${duration ? ` | Duration: ${duration}` : ''}`.trim();
 
-        // Template: task_assignment_notification
+        // Template: task_assignment_notification_v2
         // Variables: {{1}} doerName, {{2}} taskId, {{3}} givenBy, {{4}} description, {{5}} deadline, {{6}} contactNo
         // (link is hardcoded in Meta template body)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
-            'task_assignment_notification',
+            'task_assignment_notification_v2',
             [doerName, taskId, givenBy, descriptionText, startDate, contactNo],
             'en_US'
         );
@@ -425,12 +425,12 @@ export const sendMaintenanceTaskNotification = async (taskDetails) => {
 
         const descriptionText = `${displayDescription || ''}${machineName ? ` | Machine: ${machineName}` : ''}${partName ? ` | Part: ${partName}` : ''}${department ? ` | Dept: ${department}` : ''}${duration ? ` | Duration: ${duration}` : ''}`.trim();
 
-        // Template: task_assignment_notification
+        // Template: task_assignment_notification_v2
         // Variables: {{1}} doerName, {{2}} taskId, {{3}} givenBy, {{4}} description, {{5}} deadline, {{6}} contactNo
         // (link is hardcoded in Meta template body)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
-            'task_assignment_notification',
+            'task_assignment_notification_v2',
             [doerName, taskId, givenBy, descriptionText, startDate, contactNo],
             'en_US'
         );
@@ -464,12 +464,12 @@ export const sendRepairTaskNotification = async (taskDetails) => {
 
         const descriptionText = `${displayDescription || ''}${machineName ? ` | Machine: ${machineName}` : ''}${department ? ` | Dept: ${department}` : ''}${duration ? ` | Duration: ${duration}` : ''}`.trim();
 
-        // Template: task_assignment_notification
+        // Template: task_assignment_notification_v2
         // Variables: {{1}} doerName, {{2}} taskId, {{3}} givenBy, {{4}} description, {{5}} deadline, {{6}} contactNo
         // (link is hardcoded in Meta template body)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
-            'task_assignment_notification',
+            'task_assignment_notification_v2',
             [doerName, taskId, givenBy, descriptionText, startDate, contactNo],
             'en_US'
         );
@@ -746,11 +746,11 @@ export const sendTaskRejectionNotification = async (taskDetails) => {
 
         const descriptionText = `🚨 REJECTED SUBMISSION\nReason: ${reason || 'No reason provided'}\nDescription: ${description || 'N/A'}`;
 
-        // Template: task_assignment_notification
+        // Template: task_assignment_notification_v2
         // Variables: {{1}} doerName, {{2}} taskId, {{3}} allocatedBy (Admin), {{4}} description, {{5}} deadline
         return await sendWhatsAppTemplate(
             phoneNumber,
-            'task_assignment_notification',
+            'task_assignment_notification_v2',
             [doerName, taskId, 'Admin', descriptionText, 'N/A'],
             'en_US'
         );
